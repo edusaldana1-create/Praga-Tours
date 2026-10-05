@@ -1,0 +1,2350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>VERNEUS TOURS · Geoportal</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f2f5f9; height: 100vh; display: flex; flex-direction: column;
+            overflow: hidden; transition: background 0.25s, color 0.25s;
+            font-weight: 400; line-height: 1.6; color: #1e293b;
+        }
+        body.dark-mode { background: #12181f; color: #e6edf5; }
+        body.dark-mode header { background: rgba(30, 30, 30, 0.92); border-bottom-color: #000000; }
+        body.dark-mode #side-panel { background: #1a2129; border-top-color: #2a3440; }
+        body.dark-mode #side-panel .panel-header { background: #1f2937; border-bottom-color: #2a3440; }
+        body.dark-mode .stop-card-wrapper { background: #1a2129; }
+        body.dark-mode .stop-card-wrapper .stop-card { background: transparent; }
+        body.dark-mode .stop-desc-section { background: #1a2129; border-top-color: #2a3440; }
+        body.dark-mode .stop-desc-section .stop-desc-compl { color: #cbd5e1; }
+        body.dark-mode .stop-desc-label { color: #7a8ca0; }
+        body.dark-mode .stop-card .stop-title { color: #f0f4f9; }
+        body.dark-mode .stop-card .stop-desc { color: #cbd5e1; }
+        body.dark-mode .stop-card .stop-desc-compl { color: #a8b6c9; }
+        body.dark-mode .empty-state { color: #a8b6c9; }
+        body.dark-mode .nav-header-btn:disabled { background: #3a4654; }
+        body.dark-mode .menu-overlay { background: rgba(0, 0, 0, 0.55); }
+        body.dark-mode .menu-panel { background: #1a2129; border-left: 1px solid #2a3440; }
+        body.dark-mode .menu-panel .menu-item { color: #e6edf5; }
+        body.dark-mode .menu-panel .menu-item:hover { background: #2a3440; }
+        body.dark-mode .menu-panel .menu-divider { border-top-color: #2a3440; }
+        body.dark-mode .gallery-nav-btn { background: rgba(255, 255, 255, 0.12); color: #e6edf5; }
+        body.dark-mode .gallery-nav-btn:hover { background: rgba(255, 255, 255, 0.22); }
+        body.dark-mode .gallery-counter { color: #cbd5e1; }
+        body.dark-mode .clima-alert { background: #1a2129; color: #e6edf5; border-left-color: #5264AC; }
+        body.dark-mode .clima-dia { background: #1f2937; }
+        body.dark-mode .clima-dia .dia-nombre { color: #b0c4de; }
+        body.dark-mode .clima-dia .dia-max { color: #f87171; }
+        body.dark-mode .clima-dia .dia-min { color: #60a5fa; }
+        body.dark-mode .clima-dia .dia-desc { color: #a8b6c9; }
+        body.dark-mode .clima-ciudad { color: #e6edf5; }
+        body.dark-mode .leaflet-popup-content-wrapper { background: #1a2129; color: #e6edf5; }
+        body.dark-mode .leaflet-popup-tip { background: #1a2129; }
+        body.dark-mode .leaflet-popup-close-button { color: #b0c4de !important; }
+        body.dark-mode .leaflet-popup-content-wrapper .popup-nombre { color: #e6edf5; }
+        body.dark-mode .leaflet-popup-content-wrapper .popup-desc { color: #a8b6c9; }
+
+        /* ─── HEADER: color blanco + barra negra inferior ─── */
+        header {
+            background: #ffffff;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            color: #1e293b; padding: 0 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0; z-index: 1000; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            height: 48px;
+            max-height: 48px;
+            overflow: hidden;
+            /* ─── BARRA NEGRA INFERIOR ─── */
+            border-bottom: 2px solid #000000;
+        }
+        /* ─── LOGO UN POCO MÁS GRANDE ─── */
+        header .header-logo {
+            height: 90%;
+            max-height: 46px;
+            width: auto; display: block;
+            object-fit: contain;
+            margin-left: -4px;
+        }
+        .header-right { display: flex; align-items: center; gap: 6px; }
+        .hamburger-btn {
+            background: none; border: none; color: #1e293b; font-size: 1.4rem;
+            cursor: pointer; padding: 2px 6px; line-height: 1; transition: transform 0.2s;
+        }
+        .hamburger-btn:hover { transform: scale(1.1); }
+
+        .menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.35); z-index: 9998; opacity: 0;
+            visibility: hidden; transition: all 0.3s;
+        }
+        .menu-overlay.open { opacity: 1; visibility: visible; }
+
+        .menu-panel {
+            position: fixed; top: 0; right: -280px; width: 260px; max-width: 80vw;
+            height: 100%; background: white; z-index: 9999;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+            display: flex; flex-direction: column; padding: 12px 0; overflow-y: auto;
+        }
+        .menu-panel.open { right: 0; }
+        .menu-panel .menu-items { flex: 1; display: flex; flex-direction: column; }
+        .menu-panel .menu-top { flex: 1; }
+        .menu-panel .menu-bottom { border-top: 1px solid #e2e8f0; padding-top: 6px; }
+        body.dark-mode .menu-panel .menu-bottom { border-top-color: #2a3440; }
+
+        .menu-section-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #94a3b8;
+            padding: 10px 18px 4px;
+            margin-top: 4px;
+        }
+        body.dark-mode .menu-section-title { color: #7a8ca0; }
+
+        .menu-panel .menu-item {
+            display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+            color: #1e293b; font-size: 0.82rem; cursor: pointer;
+            transition: background 0.15s; border: none; background: none;
+            width: 100%; text-align: left; font-family: 'Inter', sans-serif; font-weight: 500;
+        }
+        .menu-panel .menu-item:hover { background: #f1f5f9; }
+        .menu-panel .menu-item .icon { font-size: 1rem; width: 22px; text-align: center; }
+        .menu-panel .menu-item .label { flex: 1; }
+
+        .menu-panel .menu-item .chevron {
+            font-size: 0.9rem;
+            color: #5264AC;
+            font-weight: 700;
+            transition: transform 0.25s, color 0.2s;
+        }
+        .menu-panel .menu-item.open .chevron { transform: rotate(90deg); }
+        .menu-panel .menu-item[data-action^="toggle-"]:hover .chevron { color: #F89145; }
+
+        .menu-panel .menu-item[data-action^="toggle-"] {
+            background: #f8fafc;
+            border-left: 3px solid #5264AC;
+            font-weight: 600;
+        }
+        .menu-panel .menu-item[data-action^="toggle-"]:hover {
+            background: #eef1fa;
+        }
+        body.dark-mode .menu-panel .menu-item[data-action^="toggle-"] {
+            background: #1e2635;
+        }
+        body.dark-mode .menu-panel .menu-item[data-action^="toggle-"]:hover {
+            background: #2a3440;
+        }
+
+        .menu-panel .submenu {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .menu-panel .submenu.open { max-height: 500px; }
+
+        .menu-panel .submenu a {
+            display: block; padding: 8px 18px 8px 46px;
+            font-size: 0.72rem; color: #475569; text-decoration: none;
+            font-family: 'Inter', sans-serif; font-weight: 400;
+            line-height: 1.4; border-left: 2px solid transparent;
+            transition: background 0.15s, border-color 0.15s;
+            position: relative;
+        }
+        .menu-panel .submenu a::before {
+            content: '›';
+            position: absolute;
+            left: 28px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9rem;
+            opacity: 0.6;
+        }
+        body.dark-mode .menu-panel .submenu a { color: #cbd5e1; }
+        .menu-panel .submenu a:hover {
+            background: #f1f5f9; border-left-color: #F89145;
+        }
+        body.dark-mode .menu-panel .submenu a:hover { background: #1f2937; }
+
+        .menu-panel .menu-divider { border-top: 1px solid #f1f5f9; margin: 2px 14px; }
+        body.dark-mode .menu-panel .menu-divider { border-top-color: #2a3440; }
+
+        .main-container { display: flex; flex: 1; min-height: 0; position: relative; }
+        #map { flex: 1; min-height: 0; }
+
+        .map-legend {
+            position: absolute; bottom: 20px; left: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(4px);
+            padding: 6px 12px; border-radius: 20px;
+            font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 500;
+            color: #1e293b; box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+            display: flex; align-items: center; gap: 12px; pointer-events: none;
+            border: 1px solid rgba(0,0,0,0.05); letter-spacing: 0.2px; line-height: 1.4;
+        }
+        body.dark-mode .map-legend {
+            background: rgba(20, 28, 38, 0.85); color: #e6edf5;
+            border-color: rgba(255,255,255,0.08);
+        }
+        .map-legend .legend-item { display: flex; align-items: center; gap: 5px; }
+        .map-legend .legend-dot {
+            width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+        }
+        .map-legend .legend-dot.verde { background: #5264AB; }
+        .map-legend .legend-dot.rosa { background: #FF6B6B; }
+        .map-legend .legend-dot.azul { background: #3B82F6; }
+        .map-legend .legend-line {
+            width: 18px; height: 2px; background: #64748b;
+            display: inline-block; flex-shrink: 0; border-radius: 2px;
+        }
+        body.dark-mode .map-legend .legend-line { background: #94a3b8; }
+        .map-legend .legend-sep {
+            width: 1px; height: 14px; background: rgba(0,0,0,0.10); flex-shrink: 0;
+        }
+        body.dark-mode .map-legend .legend-sep { background: rgba(255,255,255,0.10); }
+
+        .leaflet-control-locate {
+            position: absolute !important; top: 12px !important; right: 12px !important;
+            z-index: 1000 !important;
+        }
+        .leaflet-control-locate a {
+            background: white !important; border: none !important;
+            border-radius: 50% !important; width: 38px !important; height: 38px !important;
+            display: flex !important; align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12) !important;
+            transition: all 0.2s !important;
+        }
+        .leaflet-control-locate a::after {
+            content: ''; width: 10px; height: 10px; border-radius: 50%;
+            background: #1e293b; border: 2px solid white;
+            box-shadow: 0 0 0 1px #1e293b;
+        }
+        .leaflet-control-locate a:hover {
+            transform: scale(1.06) !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18) !important;
+        }
+        .leaflet-control-locate a.locating { animation: locatePulse 1s infinite; }
+        .leaflet-control-locate a.locating::after { background: #5264AC; }
+        @keyframes locatePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        body.dark-mode .leaflet-control-locate a { background: #1f2937 !important; }
+        body.dark-mode .leaflet-control-locate a::after {
+            background: #e6edf5; border-color: #1f2937; box-shadow: 0 0 0 1px #e6edf5;
+        }
+
+        #side-panel {
+            position: absolute; bottom: 0; left: 0; right: 0; width: 100%;
+            background: white; border-top: 1px solid #e2e8f0; z-index: 1000;
+            display: flex; flex-direction: column; overflow: hidden;
+            transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s, transform 0.3s, background 0.25s;
+            height: 0; max-height: 0; opacity: 0; transform: translateY(10px);
+        }
+        #side-panel.open { height: 50vh; max-height: 50vh; opacity: 1; transform: translateY(0); }
+        #side-panel .panel-header {
+            padding: 4px 10px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+            flex-shrink: 0; display: flex; justify-content: space-between;
+            align-items: center; min-height: 32px; gap: 4px;
+            transition: background 0.25s, border-color 0.25s;
+        }
+        .nav-header-center {
+            display: flex; align-items: center; justify-content: flex-end;
+            gap: 6px; flex: 1; flex-shrink: 1; margin-right: 4px;
+        }
+        .nav-header-btns { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .nav-header-btn {
+            background: #5264AC; color: white; border: none; border-radius: 20px;
+            width: 32px; height: 28px; cursor: pointer; font-size: 0.7rem;
+            transition: all 0.2s; display: flex; align-items: center;
+            justify-content: center; flex-shrink: 0; font-weight: 600;
+            letter-spacing: 0.3px; box-shadow: 0 2px 6px rgba(82, 100, 172, 0.2);
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-header-btn:hover:not(:disabled) {
+            background: #3f4f8f; transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(82, 100, 172, 0.3);
+        }
+        .nav-header-btn:disabled {
+            background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        .header-center-info {
+            font-size: 0.65rem; color: #475569; font-weight: 600;
+            min-width: 32px; text-align: center; transition: color 0.25s;
+            flex-shrink: 0; font-family: 'Inter', sans-serif;
+        }
+        .nav-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        #side-panel .panel-header .audio-header-btn {
+            background: #f4a869; color: white; border: none; border-radius: 20px;
+            min-width: 70px; height: 28px; padding: 0 16px; cursor: pointer;
+            font-size: 0.6rem; transition: all 0.2s; display: flex;
+            align-items: center; justify-content: center; gap: 5px;
+            font-weight: 600; flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(248, 145, 69, 0.15);
+            font-family: 'Inter', sans-serif; letter-spacing: 0.2px;
+        }
+        #side-panel .panel-header .audio-header-btn .audio-icon { font-size: 0.7rem; }
+        #side-panel .panel-header .audio-header-btn .audio-label { display: inline; white-space: nowrap; }
+        #side-panel .panel-header .audio-header-btn:hover:not(:disabled) {
+            background: #F89145; transform: scale(1.04);
+            box-shadow: 0 4px 12px rgba(248, 145, 69, 0.3);
+        }
+        #side-panel .panel-header .audio-header-btn.playing {
+            background: #dc2626; animation: audioPulse 1s infinite;
+        }
+        #side-panel .panel-header .audio-header-btn:disabled {
+            background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none;
+        }
+        @keyframes audioPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+
+        #side-panel .panel-header .close-btn {
+            background: none; border: none; font-size: 0.9rem; color: #94a3b8;
+            cursor: pointer; padding: 0 4px; transition: all 0.2s;
+            line-height: 1; flex-shrink: 0;
+        }
+        #side-panel .panel-header .close-btn:hover { color: #dc2626; transform: rotate(90deg); }
+
+        #side-panel .panel-content {
+            flex: 1; overflow-y: auto; padding: 8px 12px;
+            -webkit-overflow-scrolling: touch;
+        }
+        #stop-detail-wrapper { min-height: 100px; }
+        #stop-detail { display: none; }
+        #stop-detail.active { display: block; }
+
+        .stop-card-wrapper {
+            display: flex; flex-direction: column; gap: 0; background: white;
+            border-radius: 16px; overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+            transition: background 0.25s, box-shadow 0.3s;
+        }
+        .stop-card-wrapper:hover { box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08); }
+        .stop-card-wrapper .stop-card {
+            display: flex; flex-direction: row; align-items: stretch; gap: 0;
+            min-height: 120px; background: transparent; box-shadow: none; border-radius: 0;
+        }
+        .stop-card-wrapper .stop-card:hover { box-shadow: none; }
+        .stop-card .gallery-container {
+            flex: 0 0 100px; height: auto; min-height: 120px; background: #e9edf2;
+            position: relative; overflow: hidden; border-radius: 50px 0 0 0; flex-shrink: 0;
+        }
+        .stop-card .gallery-container .gallery-image {
+            width: 100%; height: 100%; object-fit: cover; cursor: pointer;
+            transition: opacity 0.25s; min-height: 120px;
+        }
+        .stop-card .gallery-container .gallery-image:hover { opacity: 0.92; }
+        .stop-card .gallery-container .gallery-placeholder {
+            color: #94a3b8; font-size: 0.6rem; font-family: 'Inter', sans-serif;
+            text-align: center; padding: 8px;
+        }
+        .stop-card .gallery-nav-btn {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.45); color: white; border: none;
+            border-radius: 50%; width: 22px; height: 22px; cursor: pointer;
+            font-size: 0.6rem; display: flex; align-items: center;
+            justify-content: center; transition: all 0.2s; z-index: 5;
+            backdrop-filter: blur(4px);
+        }
+        .stop-card .gallery-nav-btn:hover {
+            background: rgba(0, 0, 0, 0.65); transform: translateY(-50%) scale(1.05);
+        }
+        .stop-card .gallery-nav-btn:disabled {
+            opacity: 0.3; cursor: not-allowed; transform: translateY(-50%) scale(1);
+        }
+        .stop-card .gallery-nav-btn.prev { left: 2px; }
+        .stop-card .gallery-nav-btn.next { right: 2px; }
+        .stop-card .gallery-counter {
+            position: absolute; bottom: 4px; right: 6px;
+            background: rgba(0, 0, 0, 0.5); color: white; font-size: 0.5rem;
+            padding: 1px 8px; border-radius: 10px; z-index: 5;
+            backdrop-filter: blur(4px); font-family: 'Inter', sans-serif; font-weight: 500;
+        }
+        .stop-card .curiosity-overlay-btn {
+            position: absolute; bottom: 6px; left: 6px; z-index: 10;
+            background: rgba(0, 0, 0, 0.65); color: white; border: none;
+            border-radius: 14px; padding: 2px 10px; font-size: 0.5rem;
+            cursor: pointer; display: flex; align-items: center; gap: 3px;
+            backdrop-filter: blur(4px); transition: all 0.25s;
+            font-weight: 600; letter-spacing: 0.2px; font-family: 'Inter', sans-serif;
+        }
+        .stop-card .curiosity-overlay-btn:hover {
+            background: rgba(0, 0, 0, 0.8); transform: scale(1.05);
+        }
+        .stop-card .curiosity-overlay-btn .btn-icon { font-size: 0.5rem; }
+        .stop-card .curiosity-overlay-btn.hidden { opacity: 0; pointer-events: none; }
+        .stop-card .curiosity-overlay-text {
+            position: absolute; bottom: 0; left: 0; right: 0; z-index: 8;
+            background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 100%);
+            color: white; padding: 8px 10px 6px; display: flex;
+            flex-direction: column; justify-content: flex-end; text-align: left;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(1px); min-height: 24px;
+        }
+        .stop-card .curiosity-overlay-text.open { opacity: 1; pointer-events: auto; }
+        .stop-card .curiosity-overlay-text .curiosity-body {
+            font-family: 'Inter', sans-serif; font-size: 0.6rem; line-height: 1.4;
+            max-height: 40px; overflow-y: auto; padding-right: 8px;
+            font-weight: 300; letter-spacing: 0.2px;
+        }
+        .stop-card .stop-content {
+            flex: 1; padding: 8px 12px 8px 14px; display: flex;
+            flex-direction: column; justify-content: center;
+            min-width: 0; overflow: hidden;
+        }
+        .stop-title {
+            font-family: 'Merriweather', Georgia, serif; font-size: 0.9rem;
+            font-weight: 700; color: #0f172a; transition: color 0.25s;
+            margin-bottom: 2px; letter-spacing: 0.2px; line-height: 1.3;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .stop-meta {
+            display: flex; flex-wrap: wrap; gap: 6px 12px; margin-bottom: 4px;
+            font-family: 'Inter', sans-serif; font-size: 0.55rem;
+            color: #94a3b8; font-weight: 500;
+        }
+        .stop-meta span { display: flex; align-items: center; gap: 3px; }
+        .stop-meta .meta-icon { font-size: 0.6rem; }
+
+        .stop-desc-section {
+            padding: 12px 16px 16px; border-top: 2px solid #e9edf2;
+            background: #fafcff; transition: background 0.25s, border-color 0.25s;
+        }
+        .stop-desc-label {
+            font-family: 'Inter', sans-serif; font-size: 0.6rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.8px;
+            color: #94a3b8; margin-bottom: 4px;
+        }
+        .stop-desc-section .stop-desc-compl {
+            font-family: 'Inter', sans-serif; font-size: 0.75rem; line-height: 1.6;
+            color: #334155; white-space: pre-line; transition: color 0.25s;
+            border-top: none; padding-top: 0; display: block;
+            -webkit-line-clamp: unset; -webkit-box-orient: unset; overflow: visible;
+        }
+
+        @media (max-width: 480px) {
+            .stop-card .gallery-container { flex: 0 0 80px; min-height: 80px; border-radius: 12px 0 0 0; }
+            .stop-card .gallery-container .gallery-image { min-height: 80px; }
+            .stop-title { font-size: 0.75rem; }
+            .stop-desc-section { padding: 10px 12px 14px; }
+            .stop-desc-section .stop-desc-compl { font-size: 0.65rem; line-height: 1.5; }
+            .stop-desc-label { font-size: 0.5rem; letter-spacing: 0.6px; }
+            .stop-meta { font-size: 0.5rem; gap: 4px 8px; }
+            .stop-card .stop-content { padding: 6px 8px 6px 10px; }
+            .stop-card .gallery-nav-btn { width: 18px; height: 18px; font-size: 0.5rem; }
+            .stop-card .gallery-counter { font-size: 0.4rem; padding: 1px 6px; }
+            .stop-card .curiosity-overlay-btn { font-size: 0.45rem; padding: 1px 8px; bottom: 4px; left: 4px; }
+            .stop-card .curiosity-overlay-text .curiosity-body { font-size: 0.5rem; max-height: 30px; }
+            .stop-card .curiosity-overlay-text { padding: 6px 8px 4px; min-height: 20px; }
+        }
+        @media (max-width: 380px) {
+            .stop-card .gallery-container { flex: 0 0 70px; min-height: 70px; }
+            .stop-card .gallery-container .gallery-image { min-height: 70px; }
+            .stop-title { font-size: 0.7rem; }
+            .stop-desc-section { padding: 8px 10px 12px; }
+            .stop-desc-section .stop-desc-compl { font-size: 0.55rem; }
+        }
+        @media (min-width: 769px) {
+            .stop-card .gallery-container { flex: 0 0 130px; min-height: 130px; }
+            .stop-card .gallery-container .gallery-image { min-height: 130px; }
+            .stop-title { font-size: 1rem; }
+            .stop-desc-section { padding: 14px 20px 18px; }
+            .stop-desc-section .stop-desc-compl { font-size: 0.8rem; }
+            .stop-card-wrapper .stop-card { min-height: 130px; }
+        }
+
+        .empty-state { text-align: center; color: #94a3b8; padding: 24px 10px; }
+        .empty-state .icon { font-size: 1.6rem; margin-bottom: 4px; }
+        .empty-state p { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 400; }
+
+        .clima-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4); z-index: 10001;
+            display: none; align-items: center; justify-content: center;
+        }
+        .clima-overlay.open { display: flex; }
+        .clima-alert {
+            background: white; padding: 18px 22px 22px; border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15); max-width: 90vw;
+            width: 400px; border-left: 4px solid #5264AC; position: relative;
+            animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .clima-alert .clima-close {
+            position: absolute; top: 6px; right: 12px; background: none;
+            border: none; font-size: 1.2rem; cursor: pointer; color: #94a3b8;
+            transition: color 0.2s;
+        }
+        .clima-alert .clima-close:hover { color: #dc2626; }
+        .clima-ciudad {
+            font-family: 'Merriweather', Georgia, serif; font-size: 1rem;
+            font-weight: 700; color: #0f172a; margin-bottom: 12px; text-align: center;
+        }
+        .clima-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .clima-dia {
+            background: #f1f5f9; border-radius: 14px; padding: 10px 8px;
+            text-align: center; transition: background 0.25s;
+        }
+        .clima-dia .dia-nombre { font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600; color: #334155; }
+        .clima-dia .dia-fecha { font-family: 'Inter', sans-serif; font-size: 0.6rem; color: #94a3b8; margin-bottom: 4px; }
+        .clima-dia .dia-icono { font-size: 2rem; line-height: 1.2; }
+        .clima-dia .dia-temps {
+            display: flex; justify-content: center; gap: 10px;
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; font-weight: 600;
+        }
+        .clima-dia .dia-max { color: #dc2626; }
+        .clima-dia .dia-min { color: #2563eb; }
+        .clima-dia .dia-desc { font-family: 'Inter', sans-serif; font-size: 0.6rem; color: #64748b; margin-top: 2px; font-weight: 400; }
+        .clima-loading { text-align: center; padding: 12px 0; }
+        .clima-loading .spinner { font-size: 1.8rem; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .leaflet-tooltip {
+            background: rgba(0, 0, 0, 0.7) !important; color: white !important;
+            border: none !important; border-radius: 6px !important; padding: 3px 10px !important;
+            font-family: 'Inter', sans-serif !important; font-size: 0.7rem !important;
+            backdrop-filter: blur(4px) !important;
+        }
+        .leaflet-tooltip::before { display: none !important; }
+
+        .about-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 99999; display: none;
+            align-items: center; justify-content: center;
+        }
+        .about-modal-overlay.open { display: flex; }
+        .about-modal {
+            background: white; border-radius: 20px; max-width: 480px;
+            width: 90vw; max-height: 80vh; overflow-y: auto;
+            padding: 24px 28px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            position: relative; animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.dark-mode .about-modal { background: #1a2129; color: #e6edf5; }
+        .about-modal .close-modal-btn {
+            position: absolute; top: 12px; right: 18px; background: none;
+            border: none; font-size: 1.8rem; cursor: pointer; color: #94a3b8;
+            transition: color 0.2s; line-height: 1;
+        }
+        .about-modal .close-modal-btn:hover { color: #dc2626; }
+        .about-modal h2 { font-family: 'Merriweather', Georgia, serif; font-size: 1.2rem; margin-bottom: 8px; color: #0f172a; }
+        body.dark-mode .about-modal h2 { color: #e6edf5; }
+        .about-modal .about-text {
+            font-family: 'Inter', sans-serif; font-size: 0.85rem; line-height: 1.7;
+            color: #334155; margin: 12px 0;
+        }
+        body.dark-mode .about-modal .about-text { color: #a8b6c9; }
+        .about-modal .about-text a { color: #5264AC; text-decoration: none; font-weight: 600; }
+        .about-modal .about-text a:hover { text-decoration: underline; }
+        body.dark-mode .about-modal .about-text a { color: #7a8fd4; }
+        .about-modal .about-highlight {
+            background: #f1f5f9; border-radius: 12px; padding: 12px 16px;
+            margin: 12px 0; font-size: 0.8rem; border-left: 3px solid #5264AC;
+        }
+        body.dark-mode .about-modal .about-highlight { background: #1f2937; border-left-color: #5264AC; }
+        .about-modal .about-highlight strong { color: #0f172a; }
+        body.dark-mode .about-modal .about-highlight strong { color: #e6edf5; }
+        .about-modal .about-highlight a { color: #5264AC; text-decoration: none; font-weight: 500; }
+        .about-modal .about-highlight a:hover { text-decoration: underline; }
+        body.dark-mode .about-modal .about-highlight a { color: #7a8fd4; }
+
+        .ofertas-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 99999; display: none;
+            align-items: center; justify-content: center;
+        }
+        .ofertas-modal-overlay.open { display: flex; }
+        .ofertas-modal {
+            background: white; border-radius: 20px; max-width: 520px;
+            width: 90vw; max-height: 80vh; overflow-y: auto; padding: 24px 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2); position: relative;
+            animation: slideDown 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body.dark-mode .ofertas-modal { background: #1a2129; color: #e6edf5; }
+        .ofertas-modal .close-modal-btn {
+            position: absolute; top: 12px; right: 18px; background: none;
+            border: none; font-size: 1.8rem; cursor: pointer; color: #94a3b8;
+            transition: color 0.2s; line-height: 1;
+        }
+        .ofertas-modal .close-modal-btn:hover { color: #dc2626; }
+        .ofertas-modal h2 { font-family: 'Merriweather', Georgia, serif; font-size: 1.2rem; margin-bottom: 8px; color: #0f172a; }
+        body.dark-mode .ofertas-modal h2 { color: #e6edf5; }
+
+        .oferta-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 14px 16px 12px;
+            margin: 10px 0;
+            border-left: 4px solid #F89145;
+        }
+        body.dark-mode .oferta-item { background: #1f2937; }
+        .oferta-item .oferta-titulo {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.3;
+            margin-bottom: 4px;
+        }
+        body.dark-mode .oferta-item .oferta-titulo { color: #e6edf5; }
+        .oferta-item .oferta-desc {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.4;
+            margin-bottom: 6px;
+        }
+        body.dark-mode .oferta-item .oferta-desc { color: #a8b6c9; }
+        .oferta-item .oferta-descuento {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #16a34a;
+            letter-spacing: 0.2px;
+        }
+        body.dark-mode .oferta-item .oferta-descuento { color: #4ade80; }
+
+        /* ─── FRASES EN CHECO CON PESTAÑAS ─── */
+        .frases-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #e2e8f0;
+            flex-wrap: wrap;
+        }
+        body.dark-mode .frases-tabs { border-bottom-color: #2a3440; }
+        .frases-tab {
+            background: none;
+            border: none;
+            padding: 8px 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #94a3b8;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+            letter-spacing: 0.2px;
+            margin-bottom: -1px;
+        }
+        .frases-tab:hover { color: #5264AC; }
+        .frases-tab.active {
+            color: #5264AC;
+            border-bottom-color: #5264AC;
+        }
+        body.dark-mode .frases-tab { color: #7a8ca0; }
+        body.dark-mode .frases-tab:hover { color: #7a8fd4; }
+        body.dark-mode .frases-tab.active { color: #7a8fd4; border-bottom-color: #7a8fd4; }
+
+        .frases-panel { display: none; }
+        .frases-panel.active { display: block; }
+
+        .frase-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 10px;
+            padding: 7px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            border-bottom: 1px solid #f8fafc;
+        }
+        body.dark-mode .frase-item { border-bottom-color: #1f2937; }
+        .frase-item:last-child { border-bottom: none; }
+        .frase-item .frase-es { color: #64748b; flex: 1; }
+        .frase-item .frase-cz { color: #0f172a; font-weight: 600; text-align: right; }
+        body.dark-mode .frase-item .frase-es { color: #a8b6c9; }
+        body.dark-mode .frase-item .frase-cz { color: #e6edf5; }
+        .frase-item .frase-pron { color: #94a3b8; font-style: italic; font-size: 0.72rem; min-width: 70px; text-align: right; }
+        body.dark-mode .frase-item .frase-pron { color: #7a8ca0; }
+
+        .tour-item {
+            display: flex; align-items: center; gap: 12px;
+            background: #f8fafc; border-radius: 12px; padding: 14px 16px;
+            margin: 10px 0; border-left: 3px solid #F89145;
+            text-decoration: none; color: inherit;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+        }
+        body.dark-mode .tour-item { background: #1f2937; }
+        .tour-item:hover {
+            background: #eef2f7; transform: translateX(3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        body.dark-mode .tour-item:hover { background: #2a3440; }
+        .tour-item .tour-icon {
+            flex-shrink: 0; width: 32px; height: 32px;
+            background: #5264AC; color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.9rem;
+        }
+        .tour-item .tour-info { flex: 1; min-width: 0; }
+        .tour-item .tour-titulo {
+            font-weight: 600; font-size: 0.85rem; color: #0f172a;
+            line-height: 1.35;
+        }
+        body.dark-mode .tour-item .tour-titulo { color: #e6edf5; }
+        .tour-item .tour-arrow {
+            flex-shrink: 0; color: #94a3b8; font-size: 0.9rem;
+            transition: transform 0.2s, color 0.2s;
+        }
+        .tour-item:hover .tour-arrow { transform: translateX(3px); color: #F89145; }
+
+        #language-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.65); display: flex; align-items: center;
+            justify-content: center; z-index: 99999; backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease;
+        }
+        #language-modal.hidden { display: none; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-content {
+            background: white; border-radius: 20px; padding: 32px 36px 36px;
+            max-width: 360px; width: 92%;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+            animation: slideUp 0.35s ease; max-height: 90vh; overflow-y: auto; text-align: center;
+        }
+        body.dark-mode .modal-content { background: #1a2129; }
+        .modal-content .modal-title {
+            font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 600;
+            color: #1a202c; text-align: center; margin-bottom: 2px;
+            letter-spacing: 0.5px; text-transform: uppercase;
+        }
+        body.dark-mode .modal-content .modal-title { color: #e6edf5; }
+        .modal-content .modal-sub {
+            font-family: 'Inter', sans-serif; font-size: 0.8rem; color: #94a3b8;
+            text-align: center; margin-bottom: 20px; font-weight: 400;
+        }
+        body.dark-mode .modal-content .modal-sub { color: #7a8ca0; }
+        .modal-divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 18px 0; }
+        body.dark-mode .modal-divider { border-top-color: #2a3440; }
+        .modal-buttons { display: flex; flex-direction: column; gap: 10px; }
+        .modal-btn {
+            display: flex; align-items: center; justify-content: center; gap: 16px;
+            padding: 14px 20px; border: 2px solid #d1d5db; border-radius: 14px;
+            background: white; color: #1e293b; font-family: 'Inter', sans-serif;
+            font-size: 1rem; font-weight: 500; cursor: pointer;
+            transition: all 0.25s ease; text-align: center; width: 100%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        body.dark-mode .modal-btn {
+            background: #1a2129; color: #e6edf5; border-color: #3a4654;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        .modal-btn:hover {
+            background: #f1f5f9; border-color: #5264AC;
+            transform: scale(1.02); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.10);
+        }
+        body.dark-mode .modal-btn:hover { background: #1f2937; border-color: #7a8fd4; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3); }
+        .modal-btn .flag-img { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; flex-shrink: 0; order: 2; }
+        .modal-btn .lang-info { display: flex; flex-direction: column; flex: 1; text-align: center; order: 1; }
+        .modal-btn .lang-label { font-size: 1rem; font-weight: 600; line-height: 1.3; letter-spacing: 0.2px; }
+        .modal-btn .lang-native { font-size: 0.7rem; color: #94a3b8; font-weight: 400; }
+        body.dark-mode .modal-btn .lang-native { color: #7a8ca0; }
+
+        @media (max-width: 480px) {
+            .modal-content { padding: 24px 20px 28px; max-width: 300px; }
+            .modal-btn { padding: 12px 16px; gap: 12px; border-radius: 12px; }
+            .modal-btn .flag-img { width: 42px; height: 42px; }
+            .modal-btn .lang-label { font-size: 1.1rem; }
+            .modal-btn .lang-native { font-size: 0.6rem; }
+            .modal-content .modal-title { font-size: 0.85rem; }
+            .modal-content .modal-sub { font-size: 0.7rem; }
+        }
+
+        @media (max-width: 480px) {
+            #side-panel.open { height: 46vh; max-height: 46vh; }
+            .nav-header-btn { width: 28px; height: 24px; font-size: 0.55rem; border-radius: 16px; }
+            #side-panel .panel-header .audio-header-btn { min-width: 62px; height: 24px; padding: 0 12px; font-size: 0.5rem; border-radius: 16px; }
+            #side-panel .panel-header .audio-header-btn .audio-label { font-size: 0.45rem; }
+            #side-panel .panel-header .audio-header-btn .audio-icon { font-size: 0.6rem; }
+            .header-center-info { font-size: 0.5rem; min-width: 22px; }
+            #side-panel .panel-header { padding: 3px 6px; min-height: 28px; }
+            .nav-header-center { gap: 4px; }
+            .nav-header-right { gap: 4px; }
+            .leaflet-control-locate { top: 8px !important; right: 8px !important; }
+            .leaflet-control-locate a { width: 34px !important; height: 34px !important; }
+            .leaflet-control-locate a::after { width: 8px; height: 8px; }
+            .menu-panel { width: 230px; padding: 8px 0; }
+            .menu-panel .menu-item { padding: 7px 14px; font-size: 0.78rem; }
+            .menu-panel .menu-item .chevron { font-size: 1rem; }
+            .clima-alert { padding: 14px 14px 18px; width: 94vw; }
+            .clima-grid { gap: 6px; }
+            .clima-dia { padding: 6px 4px; }
+            .clima-dia .dia-icono { font-size: 1.6rem; }
+            .clima-dia .dia-temps { font-size: 0.7rem; gap: 6px; }
+            .map-legend { font-size: 0.5rem; padding: 4px 10px; gap: 8px; bottom: 12px; left: 12px; }
+            .map-legend .legend-line { width: 14px; }
+            .map-legend .legend-dot { width: 6px; height: 6px; }
+            .frases-tab { padding: 7px 10px; font-size: 0.68rem; }
+        }
+        @media (min-width: 769px) {
+            #side-panel {
+                position: relative; width: 400px; height: 100% !important;
+                max-height: 100% !important; border-left: 1px solid #e2e8f0;
+                border-top: none; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                opacity: 1 !important; transform: none !important;
+            }
+            #side-panel.collapsed { width: 0; border-left: none; opacity: 0; overflow: hidden; }
+            #side-panel.open { width: 400px; opacity: 1; }
+            .stop-card .gallery-container { flex: 0 0 130px; min-height: 130px; }
+            .stop-card .gallery-container .gallery-image { min-height: 130px; }
+            #side-panel .panel-header { padding: 4px 14px; }
+            .leaflet-control-locate { top: 12px !important; right: 12px !important; }
+            .stop-content { padding: 12px 16px 12px 18px !important; }
+            .stop-title { font-size: 1rem; }
+            .curiosity-overlay-btn { bottom: 10px; left: 10px; font-size: 0.6rem; padding: 4px 14px; }
+            .curiosity-overlay-text .curiosity-body { font-size: 0.7rem; max-height: 40px; }
+            .curiosity-overlay-text { padding: 10px 14px 8px; min-height: 30px; }
+        }
+        @media (max-width: 820px) {
+            .leaflet-control-locate { top: 8px !important; right: 8px !important; }
+            header { height: 48px; max-height: 48px; }
+            header .header-logo { height: 90%; max-height: 46px; }
+            .menu-panel { width: 240px; }
+            #side-panel { bottom: 0; left: 0; right: 0; width: 100%; border-top: 1px solid #e2e8f0; border-radius: 0; height: 0; max-height: 0; }
+            #side-panel.open { height: 50vh; max-height: 50vh; border-radius: 0; }
+            #side-panel .panel-header { border-radius: 0; }
+            .map-legend { bottom: 14px; left: 14px; font-size: 0.55rem; padding: 4px 10px; gap: 8px; }
+        }
+
+        .leaflet-popup-content { font-family: 'Inter', sans-serif; margin: 6px 10px; line-height: 1.4; min-width: 60px; }
+        .leaflet-popup-content-wrapper { border-radius: 10px; padding: 0; box-shadow: 0 4px 16px rgba(0,0,0,0.12); background: white; }
+        .leaflet-popup-tip { display: none !important; }
+        body.dark-mode .leaflet-popup-content-wrapper { background: #1a2129; }
+        .leaflet-popup-close-button { display: none !important; }
+        .custom-popup-modern .leaflet-popup-content-wrapper { border-radius: 10px; padding: 0; }
+        .custom-popup-modern .leaflet-popup-content { margin: 6px 10px; }
+        .popup-recomendado { padding: 2px 0; }
+        .popup-recomendado .popup-nombre { font-weight: 600; font-size: 0.8rem; color: #0f172a; display: flex; align-items: center; gap: 6px; }
+        .popup-recomendado .popup-tipo { font-size: 0.65rem; color: #64748b; font-weight: 400; margin-top: 1px; padding-left: 14px; }
+        body.dark-mode .popup-recomendado .popup-nombre { color: #e6edf5; }
+        body.dark-mode .popup-recomendado .popup-tipo { color: #a8b6c9; }
+        .popup-dot { display: inline-block; width: 8px; height: 8px; background: #FF6B6B; border-radius: 50%; flex-shrink: 0; }
+
+        .info-marker {
+            background: #60A5FA; border-radius: 50%; width: 22px; height: 22px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 11px; color: white;
+            border: 2px solid white; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+            cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Merriweather', Georgia, serif; font-style: italic;
+            opacity: 0.92;
+        }
+        .info-marker:hover { transform: scale(1.1); box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4); }
+        body.dark-mode .info-marker { border-color: #1a2129; }
+
+        .parada-marker {
+            background: #5264AB; color: white; border-radius: 50%;
+            width: 32px; height: 32px; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-size: 14px;
+            border: 2px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+        .parada-marker:hover { transform: scale(1.08); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); }
+        .parada-marker.seleccionado {
+            background: #facc15 !important; color: #000000 !important;
+            border-color: #000000;
+            box-shadow: 0 0 0 3px #facc15, 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        body.dark-mode .parada-marker.seleccionado {
+            border-color: #1a2129;
+            box-shadow: 0 0 0 3px #facc15, 0 4px 14px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ─── NUEVO MARCADOR DE RECOMENDADOS: punto coral discreto ─── */
+        .recomendado-dot {
+            width: 14px;
+            height: 14px;
+            background: #FF6B6B;
+            border: 2.5px solid #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .recomendado-dot:hover {
+            transform: scale(1.25);
+            box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.25), 0 3px 8px rgba(0, 0, 0, 0.3);
+        }
+        body.dark-mode .recomendado-dot {
+            border-color: #1a2129;
+        }
+
+        .custom-fa-marker { background: none !important; border: none !important; }
+
+        .user-marker-pulse {
+            width: 18px; height: 18px; background: #F89145; border-radius: 50%;
+            border: 2px solid white; box-shadow: 0 0 0 0 rgba(248, 145, 69, 0.5);
+            animation: userPulse 1.5s infinite;
+        }
+        @keyframes userPulse {
+            0% { box-shadow: 0 0 0 0 rgba(248, 145, 69, 0.5); }
+            70% { box-shadow: 0 0 0 14px rgba(248, 145, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(248, 145, 69, 0); }
+        }
+        .user-marker-pulse-inner {
+            width: 8px; height: 8px; background: #F89145; border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        #image-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85); z-index: 999999; align-items: center;
+            justify-content: center; cursor: pointer;
+        }
+        #image-modal.active { display: flex; }
+        #image-modal .close-modal {
+            position: absolute; top: 20px; right: 30px; font-size: 2.5rem;
+            color: white; cursor: pointer; transition: 0.2s; z-index: 10; font-weight: 300;
+        }
+        #image-modal .close-modal:hover { transform: scale(1.1); color: #F89145; }
+        #image-modal #modal-image {
+            max-width: 92%; max-height: 92%; border-radius: 8px;
+            object-fit: contain; box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .castillo-praga-marker {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+        .castillo-praga-marker:hover {
+            transform: scale(1.08);
+        }
+        .castillo-praga-marker img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            border-radius: 10px;
+        }
+
+        .tag-recomendado {
+            display: inline-block;
+            background: #dcfce7;
+            color: #16a34a;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.6rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 6px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        body.dark-mode .tag-recomendado {
+            background: #14532d;
+            color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="language-modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">🌍 Idioma</div>
+            <p class="modal-sub" id="modalDesc">Selecciona tu idioma</p>
+            <hr class="modal-divider">
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="selectLanguage('es')">
+                    <span class="lang-info"><span class="lang-label">Español</span></span>
+                    <img class="flag-img" src="https://zbsvgsuqcnrurttoqffv.supabase.co/storage/v1/object/public/paradas_imagenes/zidioma_espana.png" alt="Español" loading="lazy">
+                </button>
+                <button class="modal-btn" onclick="selectLanguage('en')">
+                    <span class="lang-info"><span class="lang-label">English</span></span>
+                    <img class="flag-img" src="https://zbsvgsuqcnrurttoqffv.supabase.co/storage/v1/object/public/paradas_imagenes/zidioma_reino-unido.png" alt="English" loading="lazy">
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <img class="header-logo" src="https://nxmbtyrjrrjonbukzxnq.supabase.co/storage/v1/object/public/Imagenes%20Tour%20Praga/logoVerneus.png" alt="VERNEUS">
+        <div class="header-right">
+            <button class="hamburger-btn" id="menuToggle" title="Menú">☰</button>
+        </div>
+    </header>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+    <div class="menu-panel" id="menuPanel">
+        <div class="menu-items">
+            <div class="menu-top">
+                <button class="menu-item" data-action="clima">
+                    <span class="icon">🌤️</span>
+                    <span class="label" id="menuClimaLabel">Clima</span>
+                </button>
+                <button class="menu-item" data-action="frases">
+                    <span class="icon">💬</span>
+                    <span class="label" id="menuFrasesLabel">Frases en checo</span>
+                </button>
+                <button class="menu-item" data-action="ofertas">
+                    <span class="icon">🏷️</span>
+                    <span class="label" id="menuOfertasLabel">Ofertas</span>
+                </button>
+
+                <div class="menu-section-title">Nuestros tours</div>
+
+                <button class="menu-item" data-action="toggle-reservar" id="menuReservarBtn">
+                    <span class="icon">🎫</span>
+                    <span class="label" id="menuReservarLabel">Reservar otro tour</span>
+                    <span class="chevron">›</span>
+                </button>
+                <div class="submenu" id="submenuReservar">
+                    <a href="https://verneus.com/es/praga/free-tour-castillo/" target="_blank" rel="noopener">
+                        Free Tour Castillo de Praga al Completo con Malá Strana y Puente de Carlos
+                    </a>
+                    <a href="https://verneus.com/es/praga/tour-nazismo-y-comunismo-de-praga/" target="_blank" rel="noopener">
+                        Free Tour Nazismo y Comunismo de Praga
+                    </a>
+                    <a href="https://verneus.com/es/praga/tour-leyendas-y-cerveza/" target="_blank" rel="noopener">
+                        Tour Leyendas de Praga y ¡Cerveza!
+                    </a>
+                </div>
+
+                <button class="menu-item" data-action="toggle-excursiones" id="menuExcursionesBtn">
+                    <span class="icon">🚌</span>
+                    <span class="label" id="menuExcursionesLabel">Excursiones</span>
+                    <span class="chevron">›</span>
+                </button>
+                <div class="submenu" id="submenuExcursiones">
+                    <a href="https://verneus.com/es/praga/excursion-a-terezin-desde-praga-el-campo-de-concentracion/" target="_blank" rel="noopener">
+                        Excursión a Terezin desde Praga: El Campo de Concentración
+                    </a>
+                    <a href="https://verneus.com/es/praga/excursion-a-cesky-krumlov-desde-praga-con-transporte-privado/" target="_blank" rel="noopener">
+                        Excursión a Cesky Krumlov desde Praga con transporte privado
+                    </a>
+                    <a href="https://verneus.com/es/praga/excursion-a-karlovy-vary-con-transporte-y-guia-desde-praga/" target="_blank" rel="noopener">
+                        Excursión a Karlovy Vary con transporte y guía desde Praga
+                    </a>
+                </div>
+            </div>
+
+            <div class="menu-bottom">
+                <div class="menu-divider"></div>
+                <button class="menu-item" data-action="about">
+                    <span class="icon">ℹ️</span>
+                    <span class="label" id="menuAboutLabel">Acerca de</span>
+                </button>
+                <div class="menu-divider"></div>
+                <button class="menu-item" data-action="valorar">
+                    <span class="icon">⭐</span>
+                    <span class="label" id="menuValorarLabel">Valorar Tour</span>
+                </button>
+                <div class="menu-divider"></div>
+                <button class="menu-item" data-action="apoyar">
+                    <span class="icon">❤️</span>
+                    <span class="label" id="menuApoyarLabel">Apoyar el Tour</span>
+                </button>
+                <div class="menu-divider"></div>
+                <button class="menu-item" data-action="dark">
+                    <span class="icon" id="menuDarkIcon">🌙</span>
+                    <span class="label" id="menuDarkLabel">Modo oscuro</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div id="map">
+            <div class="map-legend" id="mapLegend">
+                <span class="legend-item"><span class="legend-dot verde"></span> Paradas</span>
+                <span class="legend-item"><span class="legend-dot rosa"></span> Recomendados</span>
+                <span class="legend-item"><span class="legend-line"></span> Ruta</span>
+                <span class="legend-sep"></span>
+                <span class="legend-item"><span class="legend-dot azul"></span> Info</span>
+            </div>
+        </div>
+
+        <div id="side-panel">
+            <div class="panel-header">
+                <div class="nav-header-center">
+                    <div class="nav-header-btns">
+                        <button class="nav-header-btn" id="nav-prev" disabled title="Anterior">◀</button>
+                        <span class="header-center-info" id="nav-counter">0/0</span>
+                        <button class="nav-header-btn" id="nav-next" disabled title="Siguiente">▶</button>
+                    </div>
+                </div>
+                <div class="nav-header-right">
+                    <button id="audio-header-btn" class="audio-header-btn" disabled title="Reproducir audio">
+                        <span class="audio-icon">🔊</span>
+                        <span class="audio-label">Audio</span>
+                    </button>
+                    <button class="close-btn" id="close-panel">✕</button>
+                </div>
+            </div>
+            <div class="panel-content" id="panel-content">
+                <div id="stop-detail-wrapper">
+                    <div id="stop-detail">
+                        <div class="empty-state">
+                            <div class="icon">👆</div>
+                            <p id="empty-message">Selecciona una parada en el mapa</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ACERCA DE -->
+    <div class="about-modal-overlay" id="aboutOverlay">
+        <div class="about-modal">
+            <button class="close-modal-btn" id="aboutCloseBtn">&times;</button>
+            <h2 id="aboutTitle">ℹ️ Sobre VERNEUS TOURS</h2>
+            <div class="about-text" id="aboutText1">
+                <p><strong>VERNEUS TOURS</strong> te ofrece una forma diferente de descubrir Praga. Guías expertos, grupos reducidos y un enfoque cercano para que vivas la historia, las leyendas y los rincones más auténticos de la ciudad.</p>
+                <p>Free tours por el Castillo, Malá Strana, el barrio judío y el siglo XX, además de excursiones de día completo a Terezín, Český Krumlov y Karlovy Vary.</p>
+            </div>
+            <div class="about-highlight" id="aboutHighlight">
+                <strong>Empresa:</strong> VERNEUS TOURS<br>
+                <strong>Web:</strong> <a href="https://verneus.com/" target="_blank">verneus.com</a><br>
+                <strong>Instagram:</strong> <a href="https://www.instagram.com/verneus_tours/" target="_blank">@verneus_tours</a>
+            </div>
+            <div class="about-text" style="font-size:0.75rem; color:#94a3b8; margin-top:12px; text-align:center;" id="aboutFooter">
+                ¡Disfruta del recorrido! Si te ha gustado, valora el tour y ayúdanos a seguir mejorando.
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL OFERTAS -->
+    <div class="ofertas-modal-overlay" id="ofertasOverlay">
+        <div class="ofertas-modal">
+            <button class="close-modal-btn" id="ofertasCloseBtn">&times;</button>
+            <h2 id="ofertasTitle">🏷️ Ofertas especiales</h2>
+            <div class="about-text" style="font-size:0.8rem; color:#64748b; margin-bottom:12px;" id="ofertasSub">
+                Descuentos exclusivos para clientes de VERNEUS TOURS en Praga.
+            </div>
+
+            <div class="oferta-item">
+                <div class="oferta-titulo">
+                    <span>🍺</span> Cena + Cerveza Checa
+                </div>
+                <div class="oferta-desc">Disfruta de una cena tradicional checa con cerveza en el casco antiguo.</div>
+                <div class="oferta-descuento">15% de descuento · Código: VERNEUS15</div>
+            </div>
+
+            <div class="oferta-item">
+                <div class="oferta-titulo">
+                    <span>🚤</span> Paseo en barco por el Moldava
+                </div>
+                <div class="oferta-desc">Reserva un paseo en barco y llévate el segundo gratis.</div>
+                <div class="oferta-descuento">2x1 · Código: BARCO2X1</div>
+            </div>
+
+            <div class="oferta-item">
+                <div class="oferta-titulo">
+                    <span>🏰</span> Excursión a Karlštejn
+                </div>
+                <div class="oferta-desc">Visita el Castillo de Karlštejn, el Gran Cañón Checo y el Palacio de Průhonice.</div>
+                <div class="oferta-descuento">250 Kč de descuento · Código: KARL250</div>
+            </div>
+
+            <div class="oferta-item">
+                <div class="oferta-titulo">
+                    <span>🏛️</span> Entrada al Museo Nacional
+                </div>
+                <div class="oferta-desc">Visita el Museo Nacional de Praga (Národní muzeum) en la Plaza de Wenceslao con precio reducido.</div>
+                <div class="oferta-descuento">50 Kč de descuento · Código: MUSEOTOUR</div>
+            </div>
+
+            <div class="about-text" style="font-size:0.7rem; color:#94a3b8; margin-top:12px; text-align:center;" id="ofertasFooter">
+                Menciona el código al reservar. Ofertas válidas hasta fin de temporada.
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FRASES EN CHECO CON PESTAÑAS -->
+    <div class="ofertas-modal-overlay" id="frasesOverlay">
+        <div class="ofertas-modal">
+            <button class="close-modal-btn" id="frasesCloseBtn">&times;</button>
+
+            <div class="frases-tabs">
+                <button class="frases-tab active" data-tab="cordialidad">Cordialidad</button>
+                <button class="frases-tab" data-tab="restaurantes">Restaurantes</button>
+                <button class="frases-tab" data-tab="tiendas">Tiendas</button>
+                <button class="frases-tab" data-tab="transporte">Transporte</button>
+            </div>
+
+            <div class="frases-panel active" id="frases-cordialidad">
+                <div class="frase-item"><span class="frase-es">Hola</span><span class="frase-cz">Ahoj</span><span class="frase-pron">Ajoy</span></div>
+                <div class="frase-item"><span class="frase-es">Buenos días</span><span class="frase-cz">Dobré ráno</span><span class="frase-pron">Dobre rano</span></div>
+                <div class="frase-item"><span class="frase-es">Gracias</span><span class="frase-cz">Děkuji</span><span class="frase-pron">Dyekuyi</span></div>
+                <div class="frase-item"><span class="frase-es">Por favor</span><span class="frase-cz">Prosím</span><span class="frase-pron">Proseem</span></div>
+                <div class="frase-item"><span class="frase-es">Adiós</span><span class="frase-cz">Na shledanou</span><span class="frase-pron">Na sjledanou</span></div>
+                <div class="frase-item"><span class="frase-es">Sí / No</span><span class="frase-cz">Ano / Ne</span><span class="frase-pron">Ano / Ne</span></div>
+            </div>
+
+            <div class="frases-panel" id="frases-restaurantes">
+                <div class="frase-item"><span class="frase-es">La cuenta, por favor</span><span class="frase-cz">Účet, prosím</span><span class="frase-pron">Uchet, proseem</span></div>
+                <div class="frase-item"><span class="frase-es">Una cerveza, por favor</span><span class="frase-cz">Jedno pivo, prosím</span><span class="frase-pron">Yedno pivo, proseem</span></div>
+                <div class="frase-item"><span class="frase-es">La carta</span><span class="frase-cz">Jídelní lístek</span><span class="frase-pron">Yídelní lístek</span></div>
+                <div class="frase-item"><span class="frase-es">Está delicioso</span><span class="frase-cz">Je to výborné</span><span class="frase-pron">Ye to víborné</span></div>
+                <div class="frase-item"><span class="frase-es">Sin gluten</span><span class="frase-cz">Bez lepku</span><span class="frase-pron">Bez lepku</span></div>
+            </div>
+
+            <div class="frases-panel" id="frases-tiendas">
+                <div class="frase-item"><span class="frase-es">¿Cuánto cuesta?</span><span class="frase-cz">Kolik to stojí?</span><span class="frase-pron">Kolik to stoyí</span></div>
+                <div class="frase-item"><span class="frase-es">Es muy caro</span><span class="frase-cz">Je to moc drahé</span><span class="frase-pron">Ye to mots drahé</span></div>
+                <div class="frase-item"><span class="frase-es">Solo estoy mirando</span><span class="frase-cz">Jen se dívám</span><span class="frase-pron">Yen se dívaam</span></div>
+                <div class="frase-item"><span class="frase-es">¿Tienen bolsas?</span><span class="frase-cz">Máte tašky?</span><span class="frase-pron">Máate taski</span></div>
+                <div class="frase-item"><span class="frase-es">Pago con tarjeta</span><span class="frase-cz">Platím kartou</span><span class="frase-pron">Platím kartou</span></div>
+            </div>
+
+            <div class="frases-panel" id="frases-transporte">
+                <div class="frase-item"><span class="frase-es">¿Dónde está la parada?</span><span class="frase-cz">Kde je zastávka?</span><span class="frase-pron">Gde ye zastávka</span></div>
+                <div class="frase-item"><span class="frase-es">Un billete, por favor</span><span class="frase-cz">Jeden lístek, prosím</span><span class="frase-pron">Yeden lístek, proseem</span></div>
+                <div class="frase-item"><span class="frase-es">¿Va esto al centro?</span><span class="frase-cz">Jede to do centra?</span><span class="frase-pron">Yede to do centra</span></div>
+                <div class="frase-item"><span class="frase-es">¿A qué hora sale?</span><span class="frase-cz">V kolik hodin to jede?</span><span class="frase-pron">V kolik hodin to yede</span></div>
+                <div class="frase-item"><span class="frase-es">Ayuda</span><span class="frase-cz">Pomoc</span><span class="frase-pron">Pomots</span></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL RESERVAR OTRO TOUR -->
+    <div class="ofertas-modal-overlay" id="tour-modal-overlay">
+        <div class="ofertas-modal">
+            <button class="close-modal-btn" id="tourModalCloseBtn">&times;</button>
+            <h2 id="tourModalTitle">🎫 Reservar otro tour</h2>
+            <div class="about-text" style="font-size:0.8rem; color:#64748b; margin-bottom:12px;" id="tourModalSub">
+                Elige entre nuestros free tours disponibles en Praga.
+            </div>
+            <a class="tour-item" href="https://verneus.com/es/praga/free-tour-castillo/" target="_blank" rel="noopener">
+                <span class="tour-icon">🏰</span>
+                <span class="tour-info"><span class="tour-titulo">Free Tour Castillo de Praga al Completo con Malá Strana y Puente de Carlos</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <a class="tour-item" href="https://verneus.com/es/praga/tour-nazismo-y-comunismo-de-praga/" target="_blank" rel="noopener">
+                <span class="tour-icon">🕰️</span>
+                <span class="tour-info"><span class="tour-titulo">Free Tour Nazismo y Comunismo de Praga</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <a class="tour-item" href="https://verneus.com/es/praga/tour-leyendas-y-cerveza/" target="_blank" rel="noopener">
+                <span class="tour-icon">🍺</span>
+                <span class="tour-info"><span class="tour-titulo">Tour Leyendas de Praga y ¡Cerveza!</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <div class="about-text" style="font-size:0.7rem; color:#94a3b8; margin-top:12px; text-align:center;">
+                Reserva directamente en nuestra web oficial: <a href="https://verneus.com" target="_blank" style="color:#5264AC;">verneus.com</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL EXCURSIONES -->
+    <div class="ofertas-modal-overlay" id="excursionesOverlay">
+        <div class="ofertas-modal">
+            <button class="close-modal-btn" id="excursionesCloseBtn">&times;</button>
+            <h2 id="excursionesTitle">🚌 Excursiones</h2>
+            <div class="about-text" style="font-size:0.8rem; color:#64748b; margin-bottom:12px;" id="excursionesSub">
+                Descubre los alrededores de Praga con nuestras excursiones guiadas.
+            </div>
+            <a class="tour-item" href="https://verneus.com/es/praga/excursion-a-terezin-desde-praga-el-campo-de-concentracion/" target="_blank" rel="noopener">
+                <span class="tour-icon">🕯️</span>
+                <span class="tour-info"><span class="tour-titulo">Excursión a Terezin desde Praga: El Campo de Concentración</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <a class="tour-item" href="https://verneus.com/es/praga/excursion-a-cesky-krumlov-desde-praga-con-transporte-privado/" target="_blank" rel="noopener">
+                <span class="tour-icon">🏘️</span>
+                <span class="tour-info"><span class="tour-titulo">Excursión a Cesky Krumlov desde Praga con transporte privado</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <a class="tour-item" href="https://verneus.com/es/praga/excursion-a-karlovy-vary-con-transporte-y-guia-desde-praga/" target="_blank" rel="noopener">
+                <span class="tour-icon">💧</span>
+                <span class="tour-info"><span class="tour-titulo">Excursión a Karlovy Vary con transporte y guía desde Praga</span></span>
+                <span class="tour-arrow">›</span>
+            </a>
+            <div class="about-text" style="font-size:0.7rem; color:#94a3b8; margin-top:12px; text-align:center;" id="excursionesFooter">
+                Reserva directamente en nuestra web oficial: <a href="https://verneus.com" target="_blank" style="color:#5264AC;">verneus.com</a>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal">
+        <span class="close-modal" id="modal-close-btn">&times;</span>
+        <img id="modal-image" src="" alt="" />
+    </div>
+
+    <div class="clima-overlay" id="climaOverlay">
+        <div class="clima-alert" id="climaAlert"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-providers/1.13.0/leaflet-providers.min.js"></script>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const SUPABASE_URL = 'https://nxmbtyrjrrjonbukzxnq.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54bWJ0eXJqcnJqb25idWt6eG5xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMzc4MDMsImV4cCI6MjEwNTgxMzgwM30._8hAgDyBmZ6Stmwfpp5EOU8-WdTMfxo32pxEZnQ5BIo';
+
+        const CONFIG = {
+            BASE_URL: SUPABASE_URL,
+            API_KEY: SUPABASE_KEY,
+            CLIMA_LAT: 50.0755,
+            CLIMA_LON: 14.4378,
+            CLIMA_CIUDAD: 'Praga, República Checa',
+            TABLA_PARADAS: 'paradas',
+            TABLA_RECOMENDADOS: 'recomendados'
+        };
+
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const MENU_TRANSLATIONS = {
+            es: {
+                selectStop: 'Selecciona una parada en el mapa',
+                darkLabel: 'Modo oscuro', lightLabel: 'Modo claro',
+                clima: 'Clima', frases: 'Frases en checo', ofertas: 'Ofertas', reservar: 'Reservar otro tour', excursiones: 'Excursiones',
+                about: 'Acerca de', valorar: 'Valorar Tour', apoyar: 'Apoyar el Tour', audio: 'Audio',
+                aboutTitle: 'ℹ️ Sobre VERNEUS TOURS',
+                aboutText: '<p><strong>VERNEUS TOURS</strong> te ofrece una forma diferente de descubrir Praga. Guías expertos, grupos reducidos y un enfoque cercano para que vivas la historia, las leyendas y los rincones más auténticos de la ciudad.</p><p>Free tours por el Castillo, Malá Strana, el barrio judío y el siglo XX, además de excursiones de día completo a Terezín, Český Krumlov y Karlovy Vary.</p>',
+                aboutHighlight: '<strong>Empresa:</strong> VERNEUS TOURS<br><strong>Web:</strong> <a href="https://verneus.com/" target="_blank">verneus.com</a><br><strong>Instagram:</strong> <a href="https://www.instagram.com/verneus_tours/" target="_blank">@verneus_tours</a>',
+                aboutFooter: '¡Disfruta del recorrido! Si te ha gustado, valora el tour y ayúdanos a seguir mejorando.',
+                ofertasTitle: '🏷️ Ofertas especiales',
+                ofertasSub: 'Descuentos exclusivos para clientes de VERNEUS TOURS en Praga.',
+                ofertasFooter: 'Menciona el código al reservar. Ofertas válidas hasta fin de temporada.',
+                tourModalTitle: '🎫 Reservar otro tour',
+                tourModalSub: 'Elige entre nuestros free tours disponibles en Praga.',
+                excursionesTitle: '🚌 Excursiones',
+                excursionesSub: 'Descubre los alrededores de Praga con nuestras excursiones guiadas.',
+                excursionesFooter: 'Reserva directamente en nuestra web oficial: <a href="https://verneus.com" target="_blank" style="color:#5264AC;">verneus.com</a>',
+                modalTitle: '🌍 Idioma', modalDesc: 'Selecciona tu idioma'
+            },
+            en: {
+                selectStop: 'Select a stop on the map',
+                darkLabel: 'Dark mode', lightLabel: 'Light mode',
+                clima: 'Weather', frases: 'Czech phrases', ofertas: 'Deals', reservar: 'Book another tour', excursiones: 'Day Trips',
+                about: 'About', valorar: '⭐ Rate Tour', apoyar: '❤️ Support the Tour', audio: 'Audio',
+                aboutTitle: 'ℹ️ About VERNEUS TOURS',
+                aboutText: '<p><strong>VERNEUS TOURS</strong> offers you a different way to discover Prague. Expert guides, small groups and a close approach so you can experience the history, legends and most authentic corners of the city.</p><p>Free tours of the Castle, Malá Strana, the Jewish Quarter and the 20th century, plus full-day excursions to Terezín, Český Krumlov and Karlovy Vary.</p>',
+                aboutHighlight: '<strong>Company:</strong> VERNEUS TOURS<br><strong>Web:</strong> <a href="https://verneus.com/" target="_blank">verneus.com</a><br><strong>Instagram:</strong> <a href="https://www.instagram.com/verneus_tours/" target="_blank">@verneus_tours</a>',
+                aboutFooter: 'Enjoy the tour! If you liked it, rate the tour and help us keep improving.',
+                ofertasTitle: '🏷️ Special deals',
+                ofertasSub: 'Exclusive discounts for VERNEUS TOURS customers in Prague.',
+                ofertasFooter: 'Mention the code when booking. Offers valid until end of season.',
+                tourModalTitle: '🎫 Book another tour',
+                tourModalSub: 'Choose among our available free tours in Prague.',
+                excursionesTitle: '🚌 Day Trips',
+                excursionesSub: 'Discover the surroundings of Prague with our guided day trips.',
+                excursionesFooter: 'Book directly on our official website: <a href="https://verneus.com" target="_blank" style="color:#5264AC;">verneus.com</a>',
+                modalTitle: '🌍 Language', modalDesc: 'Select your language'
+            }
+        };
+
+        const state = {
+            lang: 'es', darkMode: false, isSpeaking: false, isTransitioning: false,
+            currentAudioIndex: null, speechSynth: null, stopSelected: null,
+            panelAbierto: false, initialViewSet: false, galleryIndices: {},
+            datos: [], datosOriginales: [], recomendadosData: [],
+            marcadores: [], marcadoresRecomendados: [], traduccionCache: {},
+            map: null, markerLayer: null, recomendadosLayer: null, rutaLayer: null,
+            userMarker: null, userCircle: null, capaActual: null,
+            paradasOrdenadas: [], gidToMarkerIndex: {}, curiosidadAbierta: {},
+            traduciendo: false, descComplTranslations: {}, textosOriginales: {},
+            descComplTraducido: {}
+        };
+
+        function getText(text) { return text || ''; }
+        function $(id) { return document.getElementById(id); }
+
+        function createIcon(iconClass, color = '#1e293b', bgColor = '#f1f5f9', size = 26) {
+            return L.divIcon({
+                className: 'custom-fa-marker',
+                html: `<div style="background-color: ${bgColor}; width: ${size}px; height: ${size}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${size * 0.5}px; color: ${color}; border: 2px solid ${color}; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: 0.1s ease;"><i class="${iconClass}"></i></div>`,
+                iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2 - 6]
+            });
+        }
+        const iconCameraBW = createIcon('fas fa-camera', '#1e293b', '#f1f5f9', 26);
+
+        async function traducirDescCompl(texto, targetLang) {
+            if (!texto || texto.trim() === '') return '';
+            if (targetLang === 'es') return texto;
+            const cacheKey = `${texto}_${targetLang}`;
+            if (state.descComplTranslations[cacheKey]) return state.descComplTranslations[cacheKey];
+            try {
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=${targetLang}&dt=t&q=${encodeURIComponent(texto)}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Error en la traducción');
+                const data = await response.json();
+                let traduccion = '';
+                if (data && data[0]) for (const part of data[0]) if (part[0]) traduccion += part[0];
+                if (!traduccion) throw new Error('No se pudo obtener la traducción');
+                state.descComplTranslations[cacheKey] = traduccion;
+                return traduccion;
+            } catch (error) { console.warn('Error al traducir:', error); return texto; }
+        }
+
+        async function traducirTodosLosDatos(datos, targetLang) {
+            console.log(`🔄 Traduciendo todos los datos al ${targetLang}...`);
+            const container = document.getElementById('stop-detail');
+            container.innerHTML = `<div class="empty-state"><div class="icon">⏳</div><p>Traduciendo datos al ${targetLang.toUpperCase()}...</p></div>`;
+            try {
+                const datosTraducidos = await Promise.all(datos.map(async (row) => {
+                    const copia = { ...row };
+                    if (row._tipo === 'parada') {
+                        if (row.nombre) copia.nombre = await traducirDescCompl(row.nombre, targetLang);
+                        if (row.desc_compl) copia.desc_compl = await traducirDescCompl(row.desc_compl, targetLang);
+                        if (row.curiosidad) copia.curiosidad = await traducirDescCompl(row.curiosidad, targetLang);
+                        if (row.desc_corta) copia.desc_corta = await traducirDescCompl(row.desc_corta, targetLang);
+                        if (row.fecha_cons) copia.fecha_cons = await traducirDescCompl(row.fecha_cons, targetLang);
+                        if (row.autor) copia.autor = await traducirDescCompl(row.autor, targetLang);
+                        if (row.historia) copia.historia = await traducirDescCompl(row.historia, targetLang);
+                        if (row.estilo) copia.estilo = await traducirDescCompl(row.estilo, targetLang);
+                    } else if (row._tipo === 'recomendado') {
+                        if (row.tipo) copia.tipo = await traducirDescCompl(row.tipo, targetLang);
+                    }
+                    return copia;
+                }));
+                state.datos = datosTraducidos;
+                state.paradasOrdenadas = datosTraducidos
+                    .filter(p => p._tipo === 'parada' && Number(p.orden) >= 1 && p.geom)
+                    .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+                redibujarDatos();
+                if (state.stopSelected !== null) {
+                    const row = state.datos[state.stopSelected];
+                    if (row && row._tipo !== 'recomendado') {
+                        const navIdx = state.paradasOrdenadas.findIndex(r => r.gid === row.gid);
+                        mostrarDetalle(row, navIdx !== -1 ? navIdx : 0);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error traduciendo datos:', error);
+                state.datos = [...state.datosOriginales];
+                state.paradasOrdenadas = state.datosOriginales
+                    .filter(p => p._tipo === 'parada' && Number(p.orden) >= 1 && p.geom)
+                    .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+                redibujarDatos();
+                document.getElementById('stop-detail').innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Error al traducir. Mostrando versión en español.</p></div>`;
+            }
+        }
+
+        function selectLanguage(lang) {
+            console.log(`🌍 Idioma seleccionado: ${lang}`);
+            state.lang = lang;
+            document.getElementById('language-modal').classList.add('hidden');
+            traducirMenu();
+            actualizarBotonAudio();
+            const t = MENU_TRANSLATIONS[lang];
+            if (t) document.getElementById('empty-message').textContent = t.selectStop;
+            if (state.datosOriginales && state.datosOriginales.length > 0) {
+                if (lang === 'es') {
+                    state.datos = [...state.datosOriginales];
+                    state.paradasOrdenadas = state.datosOriginales
+                        .filter(p => p._tipo === 'parada' && Number(p.orden) >= 1 && p.geom)
+                        .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+                    redibujarDatos();
+                    if (state.stopSelected !== null) {
+                        const row = state.datos[state.stopSelected];
+                        if (row && row._tipo !== 'recomendado') {
+                            const navIdx = state.paradasOrdenadas.findIndex(r => r.gid === row.gid);
+                            mostrarDetalle(row, navIdx !== -1 ? navIdx : 0);
+                        }
+                    }
+                } else {
+                    traducirTodosLosDatos(state.datosOriginales, lang);
+                }
+            } else {
+                cargarParadas();
+            }
+        }
+
+        function traducirMenu() {
+            const t = MENU_TRANSLATIONS[state.lang];
+            document.getElementById('menuDarkLabel').textContent = state.darkMode ? t.lightLabel : t.darkLabel;
+            document.getElementById('menuClimaLabel').textContent = t.clima;
+            document.getElementById('menuFrasesLabel').textContent = t.frases;
+            document.getElementById('menuOfertasLabel').textContent = t.ofertas;
+            document.getElementById('menuReservarLabel').textContent = t.reservar;
+            document.getElementById('menuExcursionesLabel').textContent = t.excursiones;
+            document.getElementById('menuAboutLabel').textContent = t.about;
+            document.getElementById('menuValorarLabel').textContent = t.valorar;
+            document.getElementById('menuApoyarLabel').textContent = t.apoyar;
+            document.querySelector('.audio-label').textContent = t.audio;
+            document.getElementById('empty-message').textContent = t.selectStop;
+            document.getElementById('aboutTitle').textContent = t.aboutTitle;
+            document.getElementById('aboutText1').innerHTML = t.aboutText;
+            document.getElementById('aboutHighlight').innerHTML = t.aboutHighlight;
+            document.getElementById('aboutFooter').textContent = t.aboutFooter;
+            document.getElementById('ofertasTitle').textContent = t.ofertasTitle;
+            document.getElementById('ofertasSub').textContent = t.ofertasSub;
+            document.getElementById('ofertasFooter').innerHTML = t.ofertasFooter;
+            document.getElementById('tourModalTitle').textContent = t.tourModalTitle;
+            document.getElementById('tourModalSub').textContent = t.tourModalSub;
+            document.getElementById('excursionesTitle').textContent = t.excursionesTitle;
+            document.getElementById('excursionesSub').textContent = t.excursionesSub;
+            document.getElementById('excursionesFooter').innerHTML = t.excursionesFooter;
+            document.getElementById('modalTitle').textContent = t.modalTitle;
+            document.getElementById('modalDesc').textContent = t.modalDesc;
+        }
+
+        function obtenerImagenesGaleria(row) {
+            if (!row?.galeria) return [];
+            try {
+                let data = row.galeria;
+                if (typeof data === 'string') data = JSON.parse(data);
+                if (Array.isArray(data)) return data.filter(u => u && typeof u === 'string' && u.trim());
+                if (typeof data === 'object' && data !== null)
+                    return Object.values(data).filter(u => u && typeof u === 'string' && u.trim());
+            } catch (_) {}
+            return [];
+        }
+
+        function obtenerCoordenadas(row) {
+            try {
+                let geom = row.geom;
+                if (typeof geom === 'string') geom = JSON.parse(geom);
+                if (!geom) return null;
+                if (geom.type === 'Point') return [geom.coordinates[1], geom.coordinates[0]];
+                if (geom.type === 'Polygon' || geom.type === 'MultiPolygon') {
+                    const coords = geom.coordinates[0]?.[0] || geom.coordinates[0];
+                    if (Array.isArray(coords) && coords.length) {
+                        let sumLat = 0, sumLng = 0;
+                        coords.forEach(p => { sumLng += p[0]; sumLat += p[1]; });
+                        return [sumLat / coords.length, sumLng / coords.length];
+                    }
+                }
+            } catch (_) {}
+            return null;
+        }
+
+        function cambiarImagenGaleria(galeriaId, gid, direccion) {
+            const row = state.datos.find(r => r.gid === gid);
+            if (!row) return;
+            const imagenes = obtenerImagenesGaleria(row);
+            if (!imagenes.length) return;
+            let idx = (state.galleryIndices[galeriaId] || 0) + direccion;
+            if (idx < 0) idx = imagenes.length - 1;
+            if (idx >= imagenes.length) idx = 0;
+            state.galleryIndices[galeriaId] = idx;
+            const container = document.getElementById(galeriaId);
+            if (!container) return;
+            const img = container.querySelector('.gallery-image');
+            const counter = document.getElementById(`${galeriaId}-counter`);
+            if (img) {
+                img.src = imagenes[idx];
+                img.onerror = () => { img.style.display = 'none'; const ph = container.querySelector('.gallery-placeholder'); if (ph) ph.style.display = 'flex'; };
+                img.onload = () => { img.style.display = 'block'; const ph = container.querySelector('.gallery-placeholder'); if (ph) ph.style.display = 'none'; };
+                img.onclick = () => abrirModalImagen(imagenes[idx]);
+            }
+            if (counter) counter.textContent = `${idx + 1}/${imagenes.length}`;
+        }
+
+        function abrirModalImagen(url) {
+            if (!url?.trim()) return;
+            const modal = document.getElementById('image-modal');
+            document.getElementById('modal-image').src = url;
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+        function cerrarModalImagen() {
+            document.getElementById('image-modal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function obtenerTextoAudio(row) {
+            const nombre = getText(row.nombre);
+            const desc = getText(row.desc_larga) || getText(row.desc_compl) || getText(row.desc_corta);
+            return [nombre, desc].filter(Boolean).join('. ');
+        }
+
+        function detenerAudio() {
+            if (state.speechSynth) state.speechSynth.cancel();
+            state.isSpeaking = false;
+            state.currentAudioIndex = null;
+            actualizarBotonAudio();
+        }
+
+        function toggleAudio(index) {
+            const row = state.datos[index];
+            if (!row || row._tipo === 'recomendado') return;
+            if (state.isSpeaking && state.currentAudioIndex === index) { detenerAudio(); return; }
+            const texto = obtenerTextoAudio(row);
+            if (!texto) { alert('No hay texto disponible.'); return; }
+            if (!('speechSynthesis' in window)) { alert('Tu navegador no soporta audio.'); return; }
+            if (state.speechSynth) state.speechSynth.cancel();
+            state.speechSynth = window.speechSynthesis;
+            const utterance = new SpeechSynthesisUtterance(texto);
+            const langMap = { 'es': 'es-ES', 'en': 'en-US' };
+            utterance.lang = langMap[state.lang] || 'es-ES';
+            utterance.rate = 0.85;
+            utterance.onstart = () => { state.isSpeaking = true; state.currentAudioIndex = index; actualizarBotonAudio(); };
+            utterance.onend = () => { state.isSpeaking = false; state.currentAudioIndex = null; actualizarBotonAudio(); };
+            utterance.onerror = () => { state.isSpeaking = false; state.currentAudioIndex = null; actualizarBotonAudio(); };
+            state.speechSynth.speak(utterance);
+        }
+
+        function toggleAudioHeader() {
+            if (state.stopSelected !== null) toggleAudio(state.stopSelected);
+        }
+
+        function actualizarBotonAudio() {
+            const btn = document.getElementById('audio-header-btn');
+            const idx = state.stopSelected;
+            const row = idx !== null ? state.datos[idx] : null;
+            const audioText = MENU_TRANSLATIONS[state.lang].audio;
+            if (row?._tipo === 'recomendado') {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + audioText + '</span>';
+                btn.classList.remove('playing');
+                return;
+            }
+            if (state.isSpeaking && state.currentAudioIndex === idx) {
+                btn.innerHTML = '<span class="audio-icon">⏹</span><span class="audio-label">' + audioText + '</span>';
+                btn.classList.add('playing');
+                btn.title = 'Detener audio';
+                btn.disabled = false;
+            } else {
+                btn.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">' + audioText + '</span>';
+                btn.classList.remove('playing');
+                btn.title = 'Reproducir audio';
+                btn.disabled = (idx === null || idx === undefined);
+            }
+        }
+
+        function actualizarControles(ordenActual) {
+            const paradas = state.paradasOrdenadas;
+            const total = paradas.length;
+            if (total === 0) {
+                document.getElementById('nav-prev').disabled = true;
+                document.getElementById('nav-next').disabled = true;
+                document.getElementById('nav-counter').textContent = '0/0';
+                return;
+            }
+            let idx = paradas.findIndex(p => p.orden === ordenActual);
+            if (idx === -1) {
+                const row = state.datos[state.stopSelected];
+                if (row) idx = paradas.findIndex(p => p.gid === row.gid);
+                if (idx === -1) idx = 0;
+            }
+            document.getElementById('nav-prev').disabled = idx <= 0;
+            document.getElementById('nav-next').disabled = idx >= total - 1;
+            document.getElementById('nav-counter').textContent = `${idx + 1}/${total}`;
+        }
+
+        function navegarParada(direccion) {
+            if (state.isTransitioning) return;
+            const paradas = state.paradasOrdenadas;
+            if (paradas.length === 0) return;
+            let ordenActual;
+            const rowActual = state.datos[state.stopSelected];
+            if (rowActual && rowActual._tipo !== 'recomendado') ordenActual = Number(rowActual.orden);
+            else ordenActual = paradas[0]?.orden || 1;
+            let idx = paradas.findIndex(p => p.orden === ordenActual);
+            if (idx === -1) idx = 0;
+            const nuevoIdx = idx + direccion;
+            if (nuevoIdx < 0 || nuevoIdx >= paradas.length) return;
+            state.isTransitioning = true;
+            if (state.isSpeaking) detenerAudio();
+            const targetRow = paradas[nuevoIdx];
+            const globalIdx = state.datos.findIndex(r => r.gid === targetRow.gid);
+            if (globalIdx !== -1) {
+                state.stopSelected = globalIdx;
+                mostrarDetalle(targetRow, nuevoIdx);
+                actualizarMarcadorSeleccionado(targetRow.gid);
+            }
+            state.isTransitioning = false;
+        }
+
+        function actualizarMarcadorSeleccionado(gid) {
+            state.marcadores.forEach(marker => {
+                const icon = marker.getElement();
+                if (!icon) return;
+                const div = icon.querySelector('.parada-marker');
+                if (div) div.classList.remove('seleccionado');
+                const castilloDiv = icon.querySelector('.castillo-praga-marker');
+                if (castilloDiv) castilloDiv.classList.remove('seleccionado');
+            });
+            const markerIdx = state.gidToMarkerIndex[gid];
+            if (markerIdx !== undefined && state.marcadores[markerIdx]) {
+                const marker = state.marcadores[markerIdx];
+                const icon = marker.getElement();
+                if (icon) {
+                    const div = icon.querySelector('.parada-marker');
+                    if (div) div.classList.add('seleccionado');
+                    const castilloDiv = icon.querySelector('.castillo-praga-marker');
+                    if (castilloDiv) castilloDiv.classList.add('seleccionado');
+                }
+            }
+        }
+
+        function toggleCuriosityOverlay(gid) {
+            const gidStr = String(gid);
+            const current = state.curiosidadAbierta[gidStr] || false;
+            state.curiosidadAbierta[gidStr] = !current;
+            const textEl = document.getElementById(`curiosity-text-${gid}`);
+            const btnEl = document.getElementById(`curiosity-btn-${gid}`);
+            if (textEl) textEl.classList.toggle('open', state.curiosidadAbierta[gidStr]);
+            if (btnEl) btnEl.classList.toggle('hidden', state.curiosidadAbierta[gidStr]);
+        }
+
+        function crearHTMLDetalle(row, index) {
+            const nombre = getText(row.nombre) || `Parada ${index + 1}`;
+            const descCompl = getText(row.desc_compl);
+            const fechaCons = getText(row.fecha_cons);
+            const autor = getText(row.autor);
+            const curiosidad = getText(row.curiosidad);
+            const esRecomendado = row._tipo === 'recomendado';
+            const orden = Number(row.orden);
+            const gid = row.gid;
+
+            state.descComplTraducido[index] = false;
+            state.textosOriginales[index] = { descCompl, curiosidad, fechaCons, autor };
+            if (!esRecomendado) actualizarControles(orden);
+
+            if (esRecomendado) {
+                return `
+                    <div class="stop-card-wrapper">
+                        <div class="stop-card">
+                            <div class="stop-content">
+                                <div class="stop-title">📍 ${nombre}</div>
+                                ${fechaCons ? `<div class="stop-meta"><span>📅 ${fechaCons}</span></div>` : ''}
+                                ${descCompl ? `<div class="stop-desc-compl">${descCompl}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const imagenes = obtenerImagenesGaleria(row);
+            const totalImg = imagenes.length;
+            const galeriaId = `galeria-${gid}-${Date.now()}`;
+            if (totalImg > 0) state.galleryIndices[galeriaId] = 0;
+
+            let imgHtml = '';
+            if (totalImg === 0) {
+                imgHtml = `<div class="gallery-container"><div class="gallery-placeholder">Sin imagen</div></div>`;
+            } else {
+                const mostrarFlechas = totalImg > 1;
+                const isOpen = state.curiosidadAbierta[String(gid)] || false;
+                imgHtml = `
+                    <div class="gallery-container" id="${galeriaId}">
+                        <img class="gallery-image" src="${imagenes[0]}" alt="${nombre}" 
+                             onclick="abrirModalImagen('${imagenes[0]}')"
+                             onerror="this.style.display='none'; this.parentElement.querySelector('.gallery-placeholder').style.display='flex';">
+                        <div class="gallery-placeholder" style="display:none;">Sin imagen</div>
+                        ${mostrarFlechas ? `
+                            <button class="gallery-nav-btn prev" onclick="cambiarImagenGaleria('${galeriaId}', ${gid}, -1)">◀</button>
+                            <button class="gallery-nav-btn next" onclick="cambiarImagenGaleria('${galeriaId}', ${gid}, 1)">▶</button>
+                            <span class="gallery-counter" id="${galeriaId}-counter">1/${totalImg}</span>
+                        ` : ''}
+                        ${curiosidad ? `
+                            <button class="curiosity-overlay-btn ${isOpen ? 'hidden' : ''}" 
+                                    id="curiosity-btn-${gid}"
+                                    onclick="toggleCuriosityOverlay(${gid})">
+                                <span class="btn-icon">✨</span> Curiosidad
+                            </button>
+                            <div class="curiosity-overlay-text ${isOpen ? 'open' : ''}" id="curiosity-text-${gid}">
+                                <div class="curiosity-body">${curiosidad}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            let metaHtml = '';
+            if (fechaCons || autor) {
+                let items = [];
+                if (fechaCons) items.push(`<span>📅 ${fechaCons}</span>`);
+                if (autor) items.push(`<span>✍️ ${autor}</span>`);
+                metaHtml = `<div class="stop-meta">${items.join('')}</div>`;
+            }
+
+            let descComplHtml = '';
+            if (descCompl && descCompl.trim() !== '') {
+                descComplHtml = `<div class="stop-desc-section"><div class="stop-desc-compl">${descCompl}</div></div>`;
+            }
+
+            return `
+                <div class="stop-card-wrapper">
+                    <div class="stop-card">
+                        ${imgHtml}
+                        <div class="stop-content">
+                            <div class="stop-title">${nombre}</div>
+                            ${metaHtml}
+                        </div>
+                    </div>
+                    ${descComplHtml}
+                </div>
+            `;
+        }
+
+        function mostrarDetalle(row, index) {
+            if (!row || row._tipo === 'recomendado') return;
+            if (state.isSpeaking) detenerAudio();
+            const esInfo = row._tipo === 'parada' && Number(row.orden) === 0;
+            if (esInfo) {
+                document.getElementById('nav-prev').style.display = 'none';
+                document.getElementById('nav-next').style.display = 'none';
+                document.getElementById('nav-counter').style.display = 'none';
+                document.getElementById('audio-header-btn').disabled = false;
+                actualizarBotonAudio();
+            } else {
+                document.getElementById('nav-prev').style.display = '';
+                document.getElementById('nav-next').style.display = '';
+                document.getElementById('nav-counter').style.display = '';
+                document.getElementById('audio-header-btn').disabled = false;
+                actualizarBotonAudio();
+                actualizarControles(Number(row.orden));
+            }
+            const container = document.getElementById('stop-detail');
+            container.innerHTML = crearHTMLDetalle(row, index);
+            container.classList.add('active');
+            if (!state.panelAbierto) abrirPanel();
+        }
+
+        function abrirPanel() {
+            const panel = document.getElementById('side-panel');
+            if (window.innerWidth <= 768) panel.classList.add('open');
+            else { panel.classList.remove('collapsed'); panel.classList.add('open'); }
+            state.panelAbierto = true;
+        }
+
+        function cerrarPanel() {
+            const panel = document.getElementById('side-panel');
+            if (window.innerWidth <= 768) panel.classList.remove('open');
+            else { panel.classList.add('collapsed'); panel.classList.remove('open'); }
+            state.panelAbierto = false;
+            state.marcadores.forEach(m => m.closePopup());
+            state.marcadoresRecomendados.forEach(m => m.closePopup());
+            if (state.isSpeaking) detenerAudio();
+            document.getElementById('audio-header-btn').disabled = true;
+            const audioText = MENU_TRANSLATIONS[state.lang].audio;
+            document.getElementById('audio-header-btn').innerHTML =
+                '<span class="audio-icon">🔊</span><span class="audio-label">' + audioText + '</span>';
+            document.getElementById('audio-header-btn').classList.remove('playing');
+            document.getElementById('nav-prev').disabled = true;
+            document.getElementById('nav-next').disabled = true;
+            document.getElementById('nav-counter').textContent = '0/0';
+            state.marcadores.forEach(marker => {
+                const icon = marker.getElement();
+                if (!icon) return;
+                const div = icon.querySelector('.parada-marker');
+                if (div) div.classList.remove('seleccionado');
+                const castilloDiv = icon.querySelector('.castillo-praga-marker');
+                if (castilloDiv) castilloDiv.classList.remove('seleccionado');
+            });
+        }
+
+        function seleccionarParada(index) {
+            state.stopSelected = index;
+            const row = state.datos[index];
+            if (!row?.geom) return;
+            state.marcadores.forEach(m => m.closePopup());
+            state.marcadoresRecomendados.forEach(m => m.closePopup());
+            if (row._tipo === 'recomendado') {
+                if (state.panelAbierto) cerrarPanel();
+                return;
+            }
+            actualizarMarcadorSeleccionado(row.gid);
+            const navIdx = state.paradasOrdenadas.findIndex(r => r.gid === row.gid);
+            mostrarDetalle(row, navIdx !== -1 ? navIdx : 0);
+        }
+
+        async function mostrarClima() {
+            const overlay = document.getElementById('climaOverlay');
+            const alertDiv = document.getElementById('climaAlert');
+            alertDiv.className = `clima-alert`;
+            alertDiv.innerHTML = `
+                <button class="clima-close" onclick="cerrarClima()">✕</button>
+                <div class="clima-ciudad">${CONFIG.CLIMA_CIUDAD}</div>
+                <div class="clima-loading"><div class="spinner">⏳</div>
+                <div style="font-size:0.8rem;color:#64748b;margin-top:4px;">Cargando datos...</div></div>
+            `;
+            overlay.classList.add('open');
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.CLIMA_LAT}&longitude=${CONFIG.CLIMA_LON}&current_weather=true&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=3`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('API error');
+                const data = await res.json();
+                if (!data.daily?.time?.length) throw new Error('Datos incompletos');
+                const weatherMap = { 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️', 51: '🌦️', 53: '🌦️', 55: '🌧️', 61: '🌧️', 63: '🌧️', 65: '🌧️', 71: '❄️', 73: '❄️', 75: '❄️', 80: '🌧️', 81: '🌧️', 82: '🌧️', 95: '⛈️', 96: '⛈️', 99: '⛈️' };
+                const descMap = { 0: 'Despejado', 1: 'Mayormente despejado', 2: 'Parcialmente nublado', 3: 'Nublado', 45: 'Niebla', 48: 'Niebla', 51: 'Llovizna ligera', 53: 'Llovizna', 55: 'Llovizna intensa', 61: 'Lluvia ligera', 63: 'Lluvia', 65: 'Lluvia intensa', 71: 'Nieve ligera', 73: 'Nieve', 75: 'Nieve intensa', 80: 'Chubascos ligeros', 81: 'Chubascos', 82: 'Chubascos intensos', 95: 'Tormenta', 96: 'Tormenta con granizo', 99: 'Tormenta intensa' };
+                const dias = [{ idx: 0, label: 'Hoy' }, { idx: 1, label: 'Mañana' }];
+                let html = `<button class="clima-close" onclick="cerrarClima()">✕</button><div class="clima-ciudad">${CONFIG.CLIMA_CIUDAD}</div><div class="clima-grid">`;
+                for (const d of dias) {
+                    const code = data.daily.weathercode[d.idx];
+                    const icon = weatherMap[code] || '🌤️';
+                    const desc = descMap[code] || 'Variable';
+                    const max = Math.round(data.daily.temperature_2m_max[d.idx]);
+                    const min = Math.round(data.daily.temperature_2m_min[d.idx]);
+                    const fecha = new Date(data.daily.time[d.idx] + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+                    html += `<div class="clima-dia"><div class="dia-nombre">${d.label}</div><div class="dia-fecha">${fecha}</div><div class="dia-icono">${icon}</div><div class="dia-temps"><span class="dia-max">${max}°</span><span class="dia-min">${min}°</span></div><div class="dia-desc">${desc}</div></div>`;
+                }
+                html += '</div>';
+                alertDiv.innerHTML = html;
+            } catch (_) {
+                alertDiv.innerHTML = `<button class="clima-close" onclick="cerrarClima()">✕</button><div class="clima-ciudad">${CONFIG.CLIMA_CIUDAD}</div><div style="text-align:center;padding:8px 0;color:#64748b;">No se pudo obtener el clima</div>`;
+            }
+        }
+        function cerrarClima() { document.getElementById('climaOverlay').classList.remove('open'); }
+
+        function abrirMenu() {
+            document.getElementById('menuOverlay').classList.add('open');
+            document.getElementById('menuPanel').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        function cerrarMenu() {
+            document.getElementById('menuOverlay').classList.remove('open');
+            document.getElementById('menuPanel').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        function toggleDarkMode() {
+            state.darkMode = !state.darkMode;
+            document.body.classList.toggle('dark-mode', state.darkMode);
+            document.getElementById('menuDarkIcon').textContent = state.darkMode ? '☀️' : '🌙';
+            const t = MENU_TRANSLATIONS[state.lang];
+            document.getElementById('menuDarkLabel').textContent = state.darkMode ? t.lightLabel : t.darkLabel;
+            localStorage.setItem('darkMode', state.darkMode ? 'true' : 'false');
+        }
+
+        function redibujarDatos() {
+            const paradas = state.datos.filter(r => r._tipo === 'parada' && r.geom);
+            const recomendados = state.datos.filter(r => r._tipo === 'recomendado' && r.geom);
+            dibujarParadas(paradas);
+            dibujarRecomendados(recomendados);
+            cargarRuta();
+        }
+
+        function dibujarParadas(data) {
+            state.markerLayer.clearLayers();
+            state.marcadores = [];
+            state.gidToMarkerIndex = {};
+            const sortedData = [...data].sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+            sortedData.forEach((row) => {
+                const coords = obtenerCoordenadas(row);
+                if (!coords) return;
+                const nombre = getText(row.nombre) || 'Parada';
+                const orden = Number(row.orden) || 0;
+                let iconHtml, size, zIndexOffset = 0;
+                if (nombre.toLowerCase().includes('castillo de praga')) {
+                    iconHtml = `<div class="castillo-praga-marker"><img src="https://nxmbtyrjrrjonbukzxnq.supabase.co/storage/v1/object/public/Imagenes%20Tour%20Praga/z_CASTILLO%20PRAGA.png" alt="Castillo de Praga"></div>`;
+                    size = [80, 80];
+                    zIndexOffset = -1000;
+                } else if (orden === 0) {
+                    iconHtml = `<div class="info-marker">i</div>`;
+                    size = [22, 22];
+                    zIndexOffset = 500;
+                } else {
+                    const isSelected = state.stopSelected !== null && state.datos[state.stopSelected]?.gid === row.gid;
+                    const seleccionado = isSelected ? ' seleccionado' : '';
+                    iconHtml = `<div class="parada-marker${seleccionado}">${orden}</div>`;
+                    size = [32, 32];
+                    zIndexOffset = 1000;
+                }
+                const icon = L.divIcon({ html: iconHtml, className: '', iconSize: size, iconAnchor: [size[0] / 2, size[1] / 2] });
+                const marker = L.marker(coords, { icon, title: nombre, riseOnHover: true, zIndexOffset: zIndexOffset });
+                const globalIdx = state.datos.findIndex(r => r.gid === row.gid);
+                marker.on('click', () => { if (globalIdx !== -1) seleccionarParada(globalIdx); });
+                marker.addTo(state.markerLayer);
+                state.gidToMarkerIndex[row.gid] = state.marcadores.length;
+                state.marcadores.push(marker);
+            });
+        }
+
+        function dibujarRecomendados(data) {
+            state.recomendadosLayer.clearLayers();
+            state.marcadoresRecomendados = [];
+            data.forEach((row) => {
+                const coords = obtenerCoordenadas(row);
+                if (!coords) return;
+                const nombre = getText(row.nombre) || 'Recomendado';
+                const tipo = getText(row.tipo) || '';
+                let icon;
+                if (tipo.toLowerCase() === 'foto' || tipo.toLowerCase() === 'photo') {
+                    icon = iconCameraBW;
+                } else {
+                    // ─── NUEVO MARCADOR: punto coral discreto ───
+                    icon = L.divIcon({
+                        className: '',
+                        html: `<div class="recomendado-dot"></div>`,
+                        iconSize: [14, 14],
+                        iconAnchor: [7, 7],
+                        popupAnchor: [0, -10]
+                    });
+                }
+                // zIndexOffset: 0 y riseOnHover: false → siempre por debajo de las paradas
+                const marker = L.marker(coords, { icon, title: nombre, riseOnHover: false, zIndexOffset: 0 });
+                const popupContent = `
+                    <div class="popup-recomendado" style="padding: 2px 0;">
+                        <div class="popup-nombre" style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #0f172a;">
+                            <span class="popup-dot" style="display: inline-block; width: 8px; height: 8px; background: #FF6B6B; border-radius: 50%; flex-shrink: 0;"></span>
+                            ${nombre}
+                        </div>
+                        ${tipo ? `<div class="popup-tipo" style="font-size: 0.65rem; color: #64748b; font-weight: 400; margin-top: 1px; padding-left: 14px;">${tipo}</div>` : ''}
+                    </div>`;
+                marker.bindPopup(popupContent, { className: 'custom-popup-modern', offset: [0, 0], maxWidth: 200, closeButton: false, closeOnClick: false, autoClose: true });
+                marker.on('click', function() {
+                    if (state.panelAbierto) cerrarPanel();
+                    state.marcadores.forEach(m => {
+                        const icon = m.getElement();
+                        if (icon) { const div = icon.querySelector('.parada-marker'); if (div) div.classList.remove('seleccionado'); }
+                    });
+                    marker.openPopup();
+                });
+                marker.addTo(state.recomendadosLayer);
+                state.marcadoresRecomendados.push(marker);
+            });
+        }
+
+        function cargarRuta() {
+            if (state.rutaLayer) {
+                state.map.removeLayer(state.rutaLayer);
+                state.rutaLayer = null;
+            }
+            let coordsLine = [];
+            const lineFeatures = state.datos.filter(r => {
+                if (!r.geom) return false;
+                try {
+                    const g = typeof r.geom === 'string' ? JSON.parse(r.geom) : r.geom;
+                    return g && (g.type === 'LineString' || g.type === 'MultiLineString');
+                } catch { return false; }
+            });
+            for (const row of lineFeatures) {
+                try {
+                    const g = typeof row.geom === 'string' ? JSON.parse(row.geom) : row.geom;
+                    if (g.type === 'LineString' && g.coordinates) {
+                        coordsLine = g.coordinates.map(c => [c[1], c[0]]);
+                        break;
+                    }
+                    if (g.type === 'MultiLineString' && g.coordinates) {
+                        for (const line of g.coordinates) {
+                            if (line && line.length > 0) { coordsLine = line.map(c => [c[1], c[0]]); break; }
+                        }
+                        if (coordsLine.length) break;
+                    }
+                } catch (e) {}
+            }
+
+            if (coordsLine.length === 0) {
+                console.log('ℹ️ Construyendo ruta desde paradas...');
+                const paradas = state.datos
+                    .filter(r => r._tipo === 'parada' && Number(r.orden) >= 1 && r.geom)
+                    .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+                for (const p of paradas) {
+                    const c = obtenerCoordenadas(p);
+                    if (c) coordsLine.push(c);
+                }
+            }
+            if (coordsLine.length < 2) return;
+            state.rutaLayer = L.polyline(coordsLine, { color: '#475569', weight: 3, opacity: 0.8, dashArray: '12, 8' }).addTo(state.map);
+        }
+
+        function fitMapToStops(data) {
+            const puntos = data.filter(r => r.geom).map(r => obtenerCoordenadas(r)).filter(p => p);
+            if (puntos.length) {
+                const bounds = L.latLngBounds(puntos);
+                const isMobile = window.innerWidth <= 768;
+                state.map.fitBounds(bounds, { padding: isMobile ? [200, 200] : [50, 50], animate: false, maxZoom: isMobile ? 13 : 18 });
+            }
+        }
+
+        function miUbicacion(btnElement) {
+            if (!navigator.geolocation) { alert('Geolocalización no soportada.'); return; }
+            if (!btnElement) btnElement = document.querySelector('.leaflet-control-locate a');
+            btnElement.classList.add('locating');
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    const { latitude: lat, longitude: lng } = pos.coords;
+                    if (state.userMarker) state.map.removeLayer(state.userMarker);
+                    if (state.userCircle) state.map.removeLayer(state.userCircle);
+                    state.userMarker = L.marker([lat, lng], { icon: L.divIcon({ html: `<div class="user-marker-pulse"><div class="user-marker-pulse-inner"></div></div>`, className: '', iconSize: [18, 18], iconAnchor: [9, 9] }), zIndexOffset: 2000 }).addTo(state.map);
+                    state.userCircle = L.circle([lat, lng], { radius: 50, color: '#F89145', fillColor: '#F89145', fillOpacity: 0.08, weight: 2 }).addTo(state.map);
+                    state.map.setView([lat, lng], 17);
+                    btnElement.classList.remove('locating');
+                },
+                (err) => {
+                    btnElement.classList.remove('locating');
+                    const msgs = { 1: 'Permiso denegado.', 2: 'Señal GPS débil.' };
+                    alert(msgs[err.code] || 'No se pudo obtener ubicación.');
+                }, { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+
+        async function cargarParadas() {
+            try {
+                console.log('🚀 Cargando datos desde Supabase (RPC)...');
+                const { data: tablas, error } = await supabase.rpc('listar_tablas');
+                if (error) {
+                    console.error('❌ Error en listar_tablas:', error.message);
+                    document.getElementById('stop-detail').innerHTML =
+                        `<div class="empty-state"><div class="icon">⚠️</div><p>Error: ${error.message}<br>¿Creaste la función listar_tablas()?</p></div>`;
+                    return;
+                }
+                if (!tablas || tablas.length === 0) {
+                    console.warn('⚠️ No hay tablas.');
+                    return;
+                }
+
+                const todasFilas = [];
+                for (const t of tablas) {
+                    const nombre = (typeof t === 'string') ? t : (t.nombre || t.tabla || '');
+                    if (!nombre) continue;
+                    const { data, error: errCapa } = await supabase.rpc('capa_geojson', { nombre_tabla: nombre });
+                    if (errCapa) {
+                        console.warn(`⚠️ Error cargando ${nombre}: ${errCapa.message}`);
+                        continue;
+                    }
+                    let geojson = typeof data === 'string' ? JSON.parse(data) : data;
+                    if (!geojson || !geojson.features) continue;
+
+                    const tipos = new Set(geojson.features.map(f => f.geometry && f.geometry.type));
+                    const hayLinea = [...tipos].some(t => t && t.includes('LineString'));
+                    const hayPunto = [...tipos].some(t => t && t.includes('Point'));
+                    const esRuta = hayLinea && !hayPunto;
+                    const esParadas = nombre === CONFIG.TABLA_PARADAS;
+                    const esRecomendados = nombre === CONFIG.TABLA_RECOMENDADOS;
+
+                    for (const f of geojson.features) {
+                        if (!f.geometry) continue;
+                        const props = f.properties || {};
+                        const gid = props.gid || props.id || props.orden || Math.random().toString(36).slice(2);
+                        const fila = {
+                            ...props,
+                            gid: gid,
+                            geom: f.geometry,
+                            _tabla: nombre
+                        };
+                        if (esParadas) fila._tipo = 'parada';
+                        else if (esRecomendados) fila._tipo = 'recomendado';
+                        else if (esRuta) fila._tipo = 'ruta';
+                        else fila._tipo = hayPunto ? 'parada' : (hayLinea ? 'ruta' : 'parada');
+                        todasFilas.push(fila);
+                    }
+                }
+
+                console.log(`✅ Cargadas ${todasFilas.length} features en total`);
+
+                state.datosOriginales = todasFilas;
+                state.recomendadosData = todasFilas.filter(r => r._tipo === 'recomendado');
+
+                if (state.lang === 'es') {
+                    state.datos = state.datosOriginales;
+                    state.paradasOrdenadas = todasFilas
+                        .filter(p => p._tipo === 'parada' && Number(p.orden) >= 1 && p.geom)
+                        .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+                    redibujarDatos();
+                } else {
+                    await traducirTodosLosDatos(state.datosOriginales, state.lang);
+                }
+
+                if (!state.initialViewSet) {
+                    fitMapToStops(state.datos.filter(r => r._tipo !== 'ruta'));
+                    state.initialViewSet = true;
+                }
+
+                document.getElementById('stop-detail').innerHTML =
+                    `<div class="empty-state"><div class="icon">👆</div><p id="empty-message">${MENU_TRANSLATIONS[state.lang].selectStop}</p></div>`;
+                document.getElementById('stop-detail').classList.add('active');
+                document.getElementById('side-panel').classList.toggle('open', false);
+                if (window.innerWidth > 768) document.getElementById('side-panel').classList.add('collapsed');
+                state.panelAbierto = false;
+                state.stopSelected = null;
+                document.getElementById('audio-header-btn').disabled = true;
+                const audioText = MENU_TRANSLATIONS[state.lang].audio;
+                document.getElementById('audio-header-btn').innerHTML =
+                    '<span class="audio-icon">🔊</span><span class="audio-label">' + audioText + '</span>';
+                document.getElementById('audio-header-btn').classList.remove('playing');
+                document.getElementById('nav-prev').disabled = true;
+                document.getElementById('nav-next').disabled = true;
+                document.getElementById('nav-counter').textContent = '0/0';
+
+                traducirMenu();
+                console.log('✅ Carga completada!');
+            } catch (err) {
+                console.error('❌ Error cargando datos:', err);
+            }
+        }
+
+        function initMap() {
+            state.map = L.map('map', {
+                center: [50.0875, 14.4213], zoom: 14, zoomControl: false,
+                fadeAnimation: false, zoomAnimation: false, markerZoomAnimation: false,
+            });
+            state.capaActual = L.tileLayer.provider('Esri.WorldTopoMap', {
+                maxZoom: 19,
+                attribution: '&copy; Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+            }).addTo(state.map);
+            state.markerLayer = L.layerGroup().addTo(state.map);
+            state.recomendadosLayer = L.layerGroup().addTo(state.map);
+
+            const locateControl = L.Control.extend({
+                options: { position: 'topright' },
+                onAdd: function() {
+                    const container = L.DomUtil.create('div', 'leaflet-control-locate');
+                    const link = L.DomUtil.create('a', '', container);
+                    link.href = '#'; link.title = 'Mi ubicación'; link.setAttribute('role', 'button');
+                    L.DomEvent.on(link, 'click', function(e) {
+                        L.DomEvent.stopPropagation(e);
+                        L.DomEvent.preventDefault(e);
+                        miUbicacion(link);
+                    });
+                    return container;
+                }
+            });
+            state.map.addControl(new locateControl());
+            state.map.on('click', cerrarPanel);
+        }
+
+        function valorarTour() { window.open('https://www.tripadvisor.com/Attraction_Review-g274707-d25570823-Reviews-Verneus_Tours_Free_Tour_Praga-Prague_Bohemia.html', '_blank'); }
+        function apoyarTour() { window.open('https://ko-fi.com/tuusuario', '_blank'); }
+        function abrirAbout() { document.getElementById('aboutOverlay').classList.add('open'); document.body.style.overflow = 'hidden'; }
+        function cerrarAbout() { document.getElementById('aboutOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+        function abrirOfertas() { document.getElementById('ofertasOverlay').classList.add('open'); document.body.style.overflow = 'hidden'; }
+        function cerrarOfertas() { document.getElementById('ofertasOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+        function abrirFrases() {
+            document.getElementById('frasesOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            document.querySelectorAll('.frases-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.frases-panel').forEach(p => p.classList.remove('active'));
+            document.querySelector('.frases-tab[data-tab="cordialidad"]').classList.add('active');
+            document.getElementById('frases-cordialidad').classList.add('active');
+        }
+        function cerrarFrases() { document.getElementById('frasesOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+        function abrirTourModal() { document.getElementById('tour-modal-overlay').classList.add('open'); document.body.style.overflow = 'hidden'; }
+        function cerrarTourModal() { document.getElementById('tour-modal-overlay').classList.remove('open'); document.body.style.overflow = ''; }
+        function abrirExcursiones() { document.getElementById('excursionesOverlay').classList.add('open'); document.body.style.overflow = 'hidden'; }
+        function cerrarExcursiones() { document.getElementById('excursionesOverlay').classList.remove('open'); document.body.style.overflow = ''; }
+
+        // ─── SUBMENÚS INDEPENDIENTES (sin cerrar el otro) ───
+        function toggleSubmenu(id, btn) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const isOpen = el.classList.contains('open');
+            el.classList.toggle('open', !isOpen);
+            btn.classList.toggle('open', !isOpen);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Iniciando aplicación...');
+            const dark = localStorage.getItem('darkMode') === 'true';
+            if (dark) toggleDarkMode();
+
+            initMap();
+
+            document.getElementById('menuToggle').addEventListener('click', abrirMenu);
+            document.getElementById('menuOverlay').addEventListener('click', cerrarMenu);
+            document.getElementById('close-panel').addEventListener('click', cerrarPanel);
+            document.getElementById('modal-close-btn').addEventListener('click', cerrarModalImagen);
+            document.getElementById('aboutCloseBtn').addEventListener('click', cerrarAbout);
+            document.getElementById('aboutOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarAbout(); });
+            document.getElementById('ofertasCloseBtn').addEventListener('click', cerrarOfertas);
+            document.getElementById('ofertasOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarOfertas(); });
+            document.getElementById('frasesCloseBtn').addEventListener('click', cerrarFrases);
+            document.getElementById('frasesOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarFrases(); });
+            document.getElementById('tourModalCloseBtn').addEventListener('click', cerrarTourModal);
+            document.getElementById('tour-modal-overlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarTourModal(); });
+            document.getElementById('excursionesCloseBtn').addEventListener('click', cerrarExcursiones);
+            document.getElementById('excursionesOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarExcursiones(); });
+
+            document.querySelectorAll('.frases-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.dataset.tab;
+                    document.querySelectorAll('.frases-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.frases-panel').forEach(p => p.classList.remove('active'));
+                    tab.classList.add('active');
+                    const panel = document.getElementById('frases-' + target);
+                    if (panel) panel.classList.add('active');
+                });
+            });
+
+            document.querySelector('#menuPanel .menu-items').addEventListener('click', (e) => {
+                const item = e.target.closest('.menu-item');
+                if (!item) return;
+                const action = item.dataset.action;
+                switch (action) {
+                    case 'dark': toggleDarkMode(); cerrarMenu(); break;
+                    case 'clima': mostrarClima(); cerrarMenu(); break;
+                    case 'frases': abrirFrases(); cerrarMenu(); break;
+                    case 'ofertas': abrirOfertas(); cerrarMenu(); break;
+                    case 'about': abrirAbout(); cerrarMenu(); break;
+                    case 'valorar': valorarTour(); cerrarMenu(); break;
+                    case 'apoyar': apoyarTour(); cerrarMenu(); break;
+                    case 'toggle-reservar': toggleSubmenu('submenuReservar', item); break;
+                    case 'toggle-excursiones': toggleSubmenu('submenuExcursiones', item); break;
+                }
+            });
+
+            document.querySelectorAll('.menu-panel .submenu a').forEach(a => {
+                a.addEventListener('click', () => cerrarMenu());
+            });
+
+            document.getElementById('nav-prev').addEventListener('click', () => navegarParada(-1));
+            document.getElementById('nav-next').addEventListener('click', () => navegarParada(1));
+            document.getElementById('audio-header-btn').addEventListener('click', toggleAudioHeader);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') { cerrarModalImagen(); cerrarMenu(); cerrarClima(); cerrarAbout(); cerrarOfertas(); cerrarFrases(); cerrarTourModal(); cerrarExcursiones(); }
+            });
+            document.getElementById('image-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarModalImagen(); });
+            document.getElementById('climaOverlay').addEventListener('click', (e) => { if (e.target === e.currentTarget) cerrarClima(); });
+
+            if (window.innerWidth <= 768) {
+                document.getElementById('side-panel').classList.remove('open');
+                state.panelAbierto = false;
+            }
+
+            cargarParadas();
+        });
+
+        window.seleccionarParada = seleccionarParada;
+        window.cerrarPanel = cerrarPanel;
+        window.navegarParada = navegarParada;
+        window.toggleAudioHeader = toggleAudioHeader;
+        window.miUbicacion = miUbicacion;
+        window.abrirModalImagen = abrirModalImagen;
+        window.cerrarModalImagen = cerrarModalImagen;
+        window.toggleDarkMode = toggleDarkMode;
+        window.valorarTour = valorarTour;
+        window.apoyarTour = apoyarTour;
+        window.abrirMenu = abrirMenu;
+        window.cerrarMenu = cerrarMenu;
+        window.cambiarImagenGaleria = cambiarImagenGaleria;
+        window.mostrarClima = mostrarClima;
+        window.cerrarClima = cerrarClima;
+        window.toggleCuriosityOverlay = toggleCuriosityOverlay;
+        window.abrirAbout = abrirAbout;
+        window.cerrarAbout = cerrarAbout;
+        window.abrirOfertas = abrirOfertas;
+        window.cerrarOfertas = cerrarOfertas;
+        window.abrirFrases = abrirFrases;
+        window.cerrarFrases = cerrarFrases;
+        window.abrirTourModal = abrirTourModal;
+        window.cerrarTourModal = cerrarTourModal;
+        window.abrirExcursiones = abrirExcursiones;
+        window.cerrarExcursiones = cerrarExcursiones;
+        window.selectLanguage = selectLanguage;
+    </script>
+</body>
+</html>
